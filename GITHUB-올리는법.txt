@@ -1,0 +1,122 @@
+깃허브에 올리는 법 (웹 브라우저만으로, 설치 없이)
+==================================================
+
+준비물: 깃허브 로그인된 브라우저 (크롬 또는 엣지)
+올릴 파일: C:\Users\user\Travel-Manager\github-upload   ← 이 폴더 안의 것만 올립니다
+
+  ※ Travel-Manager 폴더를 통째로 올리면 안 됩니다.
+    그 안의 node_modules 에 파일이 수천 개라 업로드가 멈춥니다.
+    github-upload 폴더에 올릴 것만 깨끗하게 모아뒀습니다.
+
+
+1단계. 저장소 만들기
+--------------------
+
+브라우저 주소창에  github.com/new  를 입력합니다.
+
+  Repository name   : travel-manager
+  Public            : ● 선택   (화면 자동 업데이트에 필요합니다)
+  Add a README file : 체크하지 않음
+  .gitignore        : None
+  License           : None
+
+    [Create repository]
+
+
+2단계. 파일 올리기
+------------------
+
+빈 저장소 화면 가운데 문장 중에
+
+    ... or  uploading an existing file
+
+의 파란 글씨 [uploading an existing file] 을 누릅니다.
+
+파일 탐색기에서 github-upload 폴더를 열고
+  Ctrl + A  (안에 있는 것 전부 선택)
+그대로 브라우저의 네모 칸으로 끌어다 놓습니다.
+
+  ※ github-upload 폴더 자체를 끌면 한 단계 더 깊이 들어갑니다.
+    반드시 폴더 "안의 것들" 을 선택해서 끌어주세요.
+
+파일 목록이 다 올라가면 아래로 내려서
+
+  Commit changes 칸 : 첫 업로드 v2.1.0
+  [Commit changes]
+
+
+3단계. 잘 올라갔는지 확인
+--------------------------
+
+저장소 첫 화면에 이렇게 보이면 됩니다.
+
+    desktop-app
+    docs
+    google-apps-script
+    .gitignore
+    CHANGELOG.md
+    README.md
+    ...
+
+docs 를 눌러 안에 Index.html 이 있는지 꼭 확인하세요.
+(자동 업데이트가 여기서 화면을 받아갑니다)
+
+
+4단계. Pages 켜기 (화면 자동 업데이트)
+--------------------------------------
+
+저장소 위쪽 탭  Settings  →  왼쪽 메뉴  Pages
+
+  Source  : Deploy from a branch
+  Branch  : main      폴더  /docs      [Save]
+
+1~2분 뒤 새로고침하면 위쪽에 주소가 나옵니다.
+
+    Your site is live at https://<내아이디>.github.io/travel-manager/
+
+이 주소를 복사해 두세요. 다음 단계에서 씁니다.
+
+
+5단계. Code.gs 에 주소 넣기
+----------------------------
+
+자동업데이트-켜는법.txt 의 3단계를 따라가세요.
+(Code.gs 의 UPDATE_URL 한 줄에 위 주소를 넣고 배포)
+
+
+앞으로 화면을 고칠 때
+----------------------
+
+1. 저장소에서 docs 폴더로 들어갑니다
+2. 오른쪽 위 [Add file] → [Upload files]
+3. 새 Index.html 을 끌어다 놓습니다 (이름이 같으면 덮어씁니다)
+4. [Commit changes]
+
+끝입니다. 쓰는 사람들은 최대 6시간 안에 새 화면을 받습니다.
+
+  ※ google-apps-script 폴더의 Index.html 도 같은 방법으로 바꿔두면
+    저장소 안의 원본과 docs 가 어긋나지 않습니다.
+
+
+파일 한 개만 조금 고칠 때
+--------------------------
+
+파일을 누르고 오른쪽 위 연필(✏️) 아이콘 → 고치고 → [Commit changes]
+브라우저에서 바로 됩니다.
+
+
+되돌리고 싶을 때
+----------------
+
+저장소 첫 화면 오른쪽의  ◷ Commits  를 누르면 지금까지 올린 기록이 나옵니다.
+원하는 시점의 파일을 열어 내용을 복사해 다시 올리면 됩니다.
+
+
+올리면 안 되는 것
+-----------------
+
+  · 백업 JSON 파일 (참가자 이름·계좌가 들어 있습니다)
+  · node_modules, dist 폴더
+
+github-upload 폴더에는 이것들이 없습니다.
+혹시 직접 파일을 더 넣으실 때만 조심하세요. 공개 저장소라 누구나 볼 수 있습니다.

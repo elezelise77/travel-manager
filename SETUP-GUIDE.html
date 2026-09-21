@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>여행 상황판 설치 가이드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@400;500;700&family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#F0F2EE; --surface:#FFFFFF; --sunken:#F7F8F5;
+  --ink:#151917; --ink-2:#4C554F; --ink-3:#7E877F;
+  --line:#DCE0D8; --line-2:#C5CCC1;
+  --deep:#1E4A3D; --deep-ink:#E9F1EC; --deep-line:#2F6252; --cream:#F3E9D6;
+  --accent:#2C6150; --accent-soft:#DEEAE3; --accent-ink:#1C463A;
+  --gold:#9A7B3F; --gold-soft:#F1E8D6;
+  --good:#2F7D53; --warm:#A35E27; --crit:#AE3830;
+  --shadow:0 1px 2px rgba(21,25,23,.05), 0 10px 28px -20px rgba(21,25,23,.35);
+  --r:12px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1413; --surface:#171D1B; --sunken:#131917;
+    --ink:#E6EAE6; --ink-2:#A5AFA9; --ink-3:#76807A;
+    --line:#27302C; --line-2:#38423C;
+    --deep:#132420; --deep-ink:#DCEAE3; --deep-line:#254036; --cream:#EFE2C9;
+    --accent:#6FBF9C; --accent-soft:#182A24; --accent-ink:#9FD9BF;
+    --gold:#CBA76A; --gold-soft:#2A2318;
+    --good:#65BA8A; --warm:#D9925B; --crit:#E1756C;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px -20px rgba(0,0,0,.9);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1413; --surface:#171D1B; --sunken:#131917;
+  --ink:#E6EAE6; --ink-2:#A5AFA9; --ink-3:#76807A;
+  --line:#27302C; --line-2:#38423C;
+  --deep:#132420; --deep-ink:#DCEAE3; --deep-line:#254036; --cream:#EFE2C9;
+  --accent:#6FBF9C; --accent-soft:#182A24; --accent-ink:#9FD9BF;
+  --gold:#CBA76A; --gold-soft:#2A2318;
+  --good:#65BA8A; --warm:#D9925B; --crit:#E1756C;
+  --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px -20px rgba(0,0,0,.9);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+[hidden]{display:none!important}
+body{background:var(--ground);color:var(--ink);
+  font-family:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  font-size:15px;line-height:1.65;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:"Hahmlet","Nanum Myeongjo",serif;font-weight:700;margin:0;letter-spacing:-.02em;text-wrap:balance}
+button{font:inherit;color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px}
+.sm{font-size:12.5px}
+.muted{color:var(--ink-3)}
+.mono{font-family:"IBM Plex Mono",monospace}
+
+/* ===== 머리 ===== */
+header{background:var(--deep);color:var(--deep-ink);padding-block:26px 20px}
+header .eyebrow{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;opacity:.6;font-weight:600}
+header h1{font-size:27px;margin-top:6px;color:var(--deep-ink)}
+header p{margin:9px 0 0;font-size:13.5px;opacity:.8;max-width:52ch}
+.prog{margin-top:18px;display:flex;align-items:center;gap:11px}
+.prog .track{flex:1;height:5px;background:rgba(255,255,255,.16);border-radius:99px;overflow:hidden}
+.prog .fill{height:100%;background:var(--cream);border-radius:99px;width:0;transition:width .4s ease}
+.prog .n{font-family:"IBM Plex Mono",monospace;font-size:12px;opacity:.85;white-space:nowrap}
+
+/* ===== 단계 이동 ===== */
+nav.steps{position:sticky;top:0;z-index:20;background:var(--ground);border-bottom:1px solid var(--line)}
+.striprow{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-block:10px}
+.striprow::-webkit-scrollbar{display:none}
+.pill{flex:0 0 auto;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);
+  border-radius:99px;padding:6px 13px;font-size:12.5px;cursor:pointer;white-space:nowrap;
+  display:flex;align-items:center;gap:6px}
+.pill .dot{width:15px;height:15px;border-radius:50%;background:var(--sunken);border:1px solid var(--line-2);
+  font-size:9px;display:flex;align-items:center;justify-content:center;font-family:"IBM Plex Mono",monospace;color:var(--ink-3)}
+.pill[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.pill[aria-current="true"] .dot{background:rgba(255,255,255,.22);border-color:transparent;color:#fff}
+.pill.done{border-color:rgba(47,125,83,.45)}
+.pill.done .dot{background:var(--good);border-color:var(--good);color:#fff}
+@media (prefers-color-scheme:dark){.pill[aria-current="true"]{color:#0E1412}.pill[aria-current="true"] .dot{color:#0E1412}}
+
+main{padding-block:22px 80px}
+
+/* ===== 단계 카드 ===== */
+.stage .kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);font-weight:700}
+.stage h2{font-size:22px;margin-top:5px}
+.stage .lead{color:var(--ink-2);font-size:14px;margin:8px 0 16px}
+
+/* ===== 목업 공통 ===== */
+.demo{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  box-shadow:var(--shadow);overflow:hidden;position:relative}
+.demo .cap{display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid var(--line);
+  background:var(--sunken);font-size:11.5px;color:var(--ink-3);letter-spacing:.04em}
+.demo .cap .replay{margin-left:auto;border:1px solid var(--line-2);background:var(--surface);
+  border-radius:7px;padding:4px 10px;font-size:11.5px;cursor:pointer;color:var(--ink-2)}
+.demo .cap .replay:hover{border-color:var(--accent);color:var(--accent-ink)}
+
+.scene{position:relative;aspect-ratio:16/10.5;background:var(--sunken);overflow:hidden;
+  font-size:clamp(7.5px,2.05vw,11px)}
+@media(min-width:700px){.scene{font-size:11px}}
+
+/* 창 크롬 */
+.win{position:absolute;inset:4%;background:var(--surface);border:1px solid var(--line);
+  border-radius:6px;overflow:hidden;display:flex;flex-direction:column}
+.wbar{height:2.1em;background:var(--sunken);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:.45em;padding:0 .7em;flex:0 0 auto}
+.wbar i{width:.55em;height:.55em;border-radius:50%;background:var(--line-2);display:block}
+.wbar .t{margin-left:.5em;font-size:.92em;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu{display:flex;gap:.15em;padding:.3em .6em;border-bottom:1px solid var(--line);flex:0 0 auto;flex-wrap:nowrap}
+.menu span{padding:.2em .45em;border-radius:4px;color:var(--ink-2);white-space:nowrap;font-size:.95em}
+.menu span.hot{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.body{flex:1;position:relative;overflow:hidden;background:var(--surface)}
+
+/* 시트 격자 */
+.grid{display:grid;grid-template-columns:1.6em repeat(4,1fr);font-size:.92em}
+.grid div{border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:.3em .4em;color:var(--ink-2);white-space:nowrap;overflow:hidden}
+.grid .hd{background:var(--sunken);color:var(--ink-3);text-align:center}
+
+/* 드롭다운 */
+.drop{position:absolute;background:var(--surface);border:1px solid var(--line-2);border-radius:6px;
+  box-shadow:0 10px 26px -10px rgba(0,0,0,.35);padding:.3em 0;min-width:9em;z-index:4}
+.drop b{display:block;padding:.32em .8em;font-weight:400;color:var(--ink-2);white-space:nowrap}
+.drop b.hot{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+
+/* 코드 편집기 */
+.editor{display:flex;height:100%}
+.files{width:27%;border-right:1px solid var(--line);background:var(--sunken);padding:.5em .45em;flex:0 0 auto}
+.files .ft{font-size:.85em;color:var(--ink-3);padding:.2em .3em;display:flex;align-items:center;gap:.3em}
+.files .ft .plus{margin-left:auto;width:1.15em;height:1.15em;border-radius:4px;background:var(--surface);
+  border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
+.files .fi{padding:.25em .4em;border-radius:4px;color:var(--ink-2);font-size:.92em;white-space:nowrap;overflow:hidden}
+.files .fi.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.code{flex:1;padding:.55em .7em;font-family:"IBM Plex Mono",monospace;font-size:.88em;
+  color:var(--ink-3);line-height:1.5;overflow:hidden;position:relative}
+.code .ln{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.code .sel{position:absolute;inset:.4em .5em auto .5em;height:5.4em;background:rgba(44,97,80,.16);
+  border-radius:4px;opacity:0}
+.toolbar{display:flex;align-items:center;gap:.4em;padding:.35em .6em;border-bottom:1px solid var(--line);
+  background:var(--sunken);flex:0 0 auto;flex-wrap:nowrap}
+.tbtn{border:1px solid var(--line-2);background:var(--surface);border-radius:5px;padding:.22em .6em;
+  color:var(--ink-2);white-space:nowrap;font-size:.92em}
+.tbtn.blue{background:var(--accent);border-color:var(--accent);color:#fff}
+.tsel{border:1px solid var(--line-2);background:var(--surface);border-radius:5px;padding:.22em .6em;
+  color:var(--ink);white-space:nowrap;font-size:.92em;display:flex;align-items:center;gap:.4em}
+.tsel::after{content:"▾";color:var(--ink-3);font-size:.8em}
+
+/* 팝업(권한/배포) */
+.modal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:74%;
+  background:var(--surface);border:1px solid var(--line-2);border-radius:8px;
+  box-shadow:0 18px 46px -18px rgba(0,0,0,.5);padding:.85em .9em;z-index:5}
+.modal h4{margin:0 0 .35em;font-size:1.05em;font-family:inherit;font-weight:600}
+.modal p{margin:0 0 .5em;font-size:.92em;color:var(--ink-2)}
+.modal .frow{display:flex;align-items:center;justify-content:space-between;gap:.5em;
+  padding:.28em 0;font-size:.92em;border-top:1px solid var(--line)}
+.modal .frow .k{color:var(--ink-3)}
+.modal .frow .v{border:1px solid var(--line-2);border-radius:5px;padding:.14em .5em;background:var(--sunken)}
+.modal .frow .v.pick{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+.modal .acts{display:flex;justify-content:flex-end;gap:.4em;margin-top:.6em}
+.urlbox{display:flex;align-items:center;gap:.4em;background:var(--sunken);border:1px solid var(--line);
+  border-radius:5px;padding:.3em .5em;font-family:"IBM Plex Mono",monospace;font-size:.82em;color:var(--ink-2)}
+.urlbox span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+
+/* 앱 화면 */
+.appbar{background:var(--deep);color:var(--deep-ink);padding:.5em .7em;font-size:.95em;font-weight:600;flex:0 0 auto}
+.apptabs{display:flex;gap:.25em;padding:.35em .6em;border-bottom:1px solid var(--line);background:var(--surface);flex:0 0 auto}
+.apptabs span{padding:.2em .45em;color:var(--ink-3);white-space:nowrap;font-size:.92em}
+.apptabs span.on{color:var(--ink);font-weight:600;border-bottom:2px solid var(--accent)}
+.formcard{padding:.8em}
+.field{margin-bottom:.5em}
+.field label{display:block;font-size:.85em;color:var(--ink-3);margin-bottom:.2em}
+.field .inp{border:1px solid var(--line-2);border-radius:5px;padding:.3em .5em;background:var(--surface);
+  color:var(--ink);font-size:.95em;min-height:1.7em}
+.bigbtn{background:var(--accent);color:#fff;border-radius:6px;padding:.35em;text-align:center;font-size:.95em;font-weight:600}
+
+/* 커서 + 클릭 물결 */
+.cur{position:absolute;width:1.5em;height:1.5em;left:0;top:0;z-index:9;pointer-events:none;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.ring{position:absolute;width:2.4em;height:2.4em;border-radius:50%;border:2px solid var(--accent);
+  z-index:8;opacity:0;pointer-events:none;margin:-1.2em 0 0 -1.2em}
+.key{position:absolute;z-index:9;background:var(--ink);color:var(--ground);border-radius:6px;
+  padding:.28em .6em;font-family:"IBM Plex Mono",monospace;font-size:.9em;opacity:0;
+  box-shadow:0 6px 16px -6px rgba(0,0,0,.5);white-space:nowrap}
+
+/* 애니메이션 재생 제어 : 기본은 멈춤(첫 화면이 그대로 보이게) */
+.scene .anim{animation-duration:7s;animation-iteration-count:infinite;animation-fill-mode:both;
+  animation-timing-function:ease-in-out;animation-play-state:paused}
+.scene.play .anim{animation-play-state:running}
+@media (prefers-reduced-motion:reduce){
+  .scene .anim{animation:none!important}
+  .cur,.ring,.key{display:none}
+  .drop,.modal{opacity:1!important;transform:none!important}
+  .code .sel{opacity:.6!important}
+}
+@keyframes appear{ 0%,100%{opacity:0;transform:translateY(-4px) scale(.97)} 6%,94%{opacity:1;transform:none} }
+@keyframes tap{ 0%{opacity:0;transform:scale(.4)} 40%{opacity:.9} 100%{opacity:0;transform:scale(1.5)} }
+@keyframes keyin{ 0%,100%{opacity:0;transform:translateY(6px)} 8%,92%{opacity:1;transform:none} }
+@keyframes selshow{ 0%,100%{opacity:0} 10%,90%{opacity:1} }
+
+/* ===== 설명 ===== */
+.explain{margin-top:16px;display:flex;flex-direction:column;gap:11px}
+.act{display:flex;gap:11px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);padding:12px 14px}
+.act .idx{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;margin-top:1px}
+@media (prefers-color-scheme:dark){.act .idx{color:#0E1412}}
+.act .tx{flex:1;min-width:0;font-size:13.5px}
+.act .tx b{font-weight:600}
+.ui{display:inline-block;background:var(--sunken);border:1px solid var(--line-2);border-radius:5px;
+  padding:1px 6px;font-size:12.5px;font-family:"IBM Plex Mono",monospace;white-space:nowrap}
+.ui.go{background:var(--accent-soft);border-color:rgba(44,97,80,.4);color:var(--accent-ink);font-weight:600}
+.warn{background:var(--gold-soft);border:1px solid rgba(154,123,63,.4);border-radius:var(--r);
+  padding:12px 14px;font-size:13px;color:var(--ink-2)}
+.warn b{color:var(--ink)}
+.warn + .warn{margin-top:-2px}
+
+/* ===== 아래 이동 ===== */
+.nav{display:flex;gap:9px;margin-top:22px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border-radius:10px;
+  border:1px solid var(--line-2);background:var(--surface);cursor:pointer;font-size:14px}
+.btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;flex:1}
+@media (prefers-color-scheme:dark){.btn.primary{color:#0E1412}}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.45;cursor:default}
+.done-note{text-align:center;color:var(--good);font-size:13px;margin-top:10px;font-weight:600}
+footer{border-top:1px solid var(--line);margin-top:30px;padding-block:20px 0;color:var(--ink-3);font-size:12.5px}
+
+@media(max-width:560px){
+  header h1{font-size:23px}
+  .stage h2{font-size:20px}
+  .btn{padding:12px 14px}
+  .nav .btn:not(.primary){padding-inline:13px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">TRIP BOARD · SETUP</div>
+    <h1>여행 상황판 설치 가이드</h1>
+    <p>구글시트 하나로 친구들과 쓰는 여행 정산·일정 앱을 만듭니다. 화면 그대로 따라만 하면 됩니다.</p>
+    <div class="prog">
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <div class="n" id="progN">0 / 8</div>
+    </div>
+  </div>
+</header>
+
+<nav class="steps"><div class="wrap striprow" id="strip"></div></nav>
+
+<main class="wrap">
+  <div class="stage" id="stage"></div>
+  <div class="nav">
+    <button class="btn" id="prev">이전</button>
+    <button class="btn primary" id="next">이 단계 완료</button>
+  </div>
+  <div class="done-note" id="doneNote" hidden>✓ 완료한 단계입니다</div>
+
+  <footer>
+    진행 상태는 이 기기에 저장됩니다. 중간에 닫아도 이어서 할 수 있습니다.<br>
+    막히면 각 단계의 주의 상자를 다시 읽어보세요 — 대부분 거기 적힌 것이 원인입니다.
+  </footer>
+</main>
+
+<script>
+/* ====== 화면(목업) 조각들 ====== */
+function cur(path){ return '<svg class="cur anim" style="animation-name:'+path+'" viewBox="0 0 24 24">'+
+  '<path d="M5 2l14 9-6 1.2 3.2 6.4-2.6 1.3L10.4 13.5 5 18z" fill="#fff" stroke="#151917" stroke-width="1.3" stroke-linejoin="round"/></svg>'; }
+function ring(x,y,d){ return '<div class="ring anim" style="animation-name:tap;animation-delay:'+d+'s;left:'+x+'%;top:'+y+'%"></div>'; }
+function key(txt,x,y,d){ return '<div class="key anim" style="animation-name:keyin;animation-delay:'+d+'s;left:'+x+'%;top:'+y+'%">'+txt+'</div>'; }
+
+var SHEET_MENU = '<div class="menu"><span>파일</span><span>수정</span><span>보기</span><span>삽입</span>'+
+  '<span>서식</span><span>데이터</span><span>도구</span><span class="hot">확장 프로그램</span><span>도움말</span></div>';
+var BLANK_GRID = '<div class="grid">'+
+  '<div class="hd"></div><div class="hd">A</div><div class="hd">B</div><div class="hd">C</div><div class="hd">D</div>'+
+  '<div class="hd">1</div><div></div><div></div><div></div><div></div>'+
+  '<div class="hd">2</div><div></div><div></div><div></div><div></div>'+
+  '<div class="hd">3</div><div></div><div></div><div></div><div></div>'+
+  '<div class="hd">4</div><div></div><div></div><div></div><div></div></div>';
+var SHEET_GRID = '<div class="grid">'+
+  '<div class="hd"></div><div class="hd">A</div><div class="hd">B</div><div class="hd">C</div><div class="hd">D</div>'+
+  '<div class="hd">1</div><div>이름</div><div>거주지</div><div>출발지</div><div>참석여부</div>'+
+  '<div class="hd">2</div><div>홍길동</div><div>서울 구로구</div><div></div><div>참석</div>'+
+  '<div class="hd">3</div><div>김철수</div><div>경기 안양시</div><div></div><div>미정</div>'+
+  '<div class="hd">4</div><div>이영희</div><div>성남시 분당구</div><div></div><div></div></div>';
+
+var CODE_LINES = ['function doGet(){','  ensureSetup_();','  var t = HtmlService','    .createTemplateFromFile(&quot;Index&quot;);','  return t.evaluate();','}'];
+function codeBody(lines){ return lines.map(function(l){return '<div class="ln">'+l+'</div>'}).join(''); }
+
+/* ====== 단계 정의 ====== */
+var STEPS = [
+{
+  id:0, title:'빈 구글시트 만들기',
+  lead:'내 구글 계정에 새 스프레드시트를 하나 만듭니다. 남의 시트를 복사하는 게 아니라, 빈 종이에서 시작합니다.',
+  scene:
+    '<div class="win"><div class="wbar"><i></i><i></i><i></i><div class="t">제목 없는 스프레드시트 — Google Sheets</div></div>'+
+    SHEET_MENU+'<div class="body">'+BLANK_GRID+
+      '<div class="drop anim" style="animation-name:appear;animation-delay:2.4s;left:6%;top:0">'+
+        '<b class="hot">우리 여행</b></div>'+
+    '</div></div>'+
+    ring(12,9,2.2)+cur('p0'),
+  css:'@keyframes p0{0%{left:60%;top:70%}30%{left:12%;top:8%}45%{left:12%;top:8%}100%{left:12%;top:8%}}',
+  acts:[
+    ['브라우저 주소창에 <span class="ui go">sheets.new</span> 를 치면 새 시트가 바로 만들어집니다.'],
+    ['왼쪽 위 <span class="ui go">제목 없는 스프레드시트</span> 를 눌러 <b>우리 여행</b> 처럼 이름을 붙여둡니다.']
+  ],
+  warn:'시트 안에 표를 직접 만들 필요는 없습니다. 다음 단계에서 프로그램이 알아서 만들어 줍니다.'
+},
+{
+  id:1, kicker:'1단계', title:'Apps Script 열기',
+  lead:'구글시트 안에 프로그램을 넣을 자리를 엽니다. 시트를 PC 브라우저에서 열어주세요.',
+  scene:
+    '<div class="win"><div class="wbar"><i></i><i></i><i></i><div class="t">우리 여행 — Google Sheets</div></div>'+
+    SHEET_MENU+'<div class="body">'+SHEET_GRID+
+      '<div class="drop anim" style="animation-name:appear;animation-delay:2.2s;left:56%;top:0">'+
+        '<b>애드온</b><b class="hot">Apps Script</b><b>매크로</b></div>'+
+    '</div></div>'+
+    ring(60,15.5,2.0)+ring(66,27,4.3)+cur('p1'),
+  css:'@keyframes p1{0%{left:20%;top:70%}22%{left:59%;top:14%}30%{left:59%;top:14%}55%{left:65%;top:26%}70%{left:65%;top:26%}100%{left:65%;top:26%}}',
+  acts:[
+    ['시트 위쪽 메뉴에서 <span class="ui go">확장 프로그램</span> 을 누릅니다.'],
+    ['펼쳐진 목록에서 <span class="ui go">Apps Script</span> 를 누릅니다. 새 탭이 열립니다.']
+  ],
+  warn:'휴대폰에서는 이 메뉴가 없습니다. <b>설치는 PC에서</b> 하고, 다 만든 뒤 쓰는 것만 휴대폰으로 하세요.'
+},
+{
+  id:2, kicker:'2단계', title:'Code.gs 붙여넣기',
+  lead:'열린 편집기에 원래 있던 내용을 지우고, 받은 Code.gs 파일 내용을 통째로 붙여넣습니다.',
+  scene:
+    '<div class="win"><div class="wbar"><i></i><i></i><i></i><div class="t">Apps Script</div></div>'+
+    '<div class="body"><div class="editor">'+
+      '<div class="files"><div class="ft">파일<span class="plus">＋</span></div>'+
+        '<div class="fi on">Code.gs</div></div>'+
+      '<div class="code"><div class="sel anim" style="animation-name:selshow;animation-delay:1.9s"></div>'+
+        codeBody(CODE_LINES)+'</div>'+
+    '</div></div></div>'+
+    key('Ctrl + A',30,66,1.8)+key('Ctrl + V',58,66,3.9)+ring(60,38,1.4)+cur('p2'),
+  css:'@keyframes p2{0%{left:15%;top:80%}18%{left:59%;top:36%}28%{left:59%;top:36%}100%{left:59%;top:36%}}',
+  acts:[
+    ['편집기 오른쪽 코드 영역을 한 번 <b>클릭</b>합니다.'],
+    ['<span class="ui">Ctrl</span> + <span class="ui">A</span> 로 전체 선택한 뒤 <span class="ui">Delete</span> 로 지웁니다.'],
+    ['받은 <span class="ui">Code.gs</span> 파일을 메모장으로 열어 전체 복사하고, <span class="ui">Ctrl</span> + <span class="ui">V</span> 로 붙여넣습니다.']
+  ],
+  warn:'일부만 복사되면 나중에 이상한 오류가 납니다. <b>첫 줄부터 마지막 줄까지</b> 전부 복사됐는지 확인하세요.'
+},
+{
+  id:3, kicker:'3단계', title:'Index 파일 만들기',
+  lead:'화면을 그리는 파일을 하나 더 추가합니다. 이름을 정확히 Index 로 지어야 합니다.',
+  scene:
+    '<div class="win"><div class="wbar"><i></i><i></i><i></i><div class="t">Apps Script</div></div>'+
+    '<div class="body"><div class="editor">'+
+      '<div class="files"><div class="ft">파일<span class="plus">＋</span></div>'+
+        '<div class="fi">Code.gs</div>'+
+        '<div class="fi on anim" style="animation-name:appear;animation-delay:4.6s">Index.html</div></div>'+
+      '<div class="code">'+codeBody(['// 화면 파일을 추가합니다','']) +'</div>'+
+      '<div class="drop anim" style="animation-name:appear;animation-delay:1.9s;left:20%;top:8%">'+
+        '<b>스크립트</b><b class="hot">HTML</b></div>'+
+      '<div class="modal anim" style="animation-name:appear;animation-delay:3.3s;width:56%;top:46%">'+
+        '<h4>파일 이름</h4><div class="urlbox"><span>Index</span></div>'+
+        '<div class="acts"><span class="tbtn blue">확인</span></div></div>'+
+    '</div></div></div>'+
+    ring(22,12,1.7)+ring(28,20,3.1)+ring(64,60,4.4)+cur('p3'),
+  css:'@keyframes p3{0%{left:50%;top:80%}16%{left:21%;top:10.5%}26%{left:21%;top:10.5%}40%{left:27%;top:18.5%}52%{left:27%;top:18.5%}62%{left:63%;top:58.5%}100%{left:63%;top:58.5%}}',
+  acts:[
+    ['왼쪽 <b>파일</b> 옆의 <span class="ui go">＋</span> 를 누릅니다.'],
+    ['<span class="ui go">HTML</span> 을 고릅니다. (스크립트 아님)'],
+    ['이름 칸에 <span class="ui">Index</span> 라고만 칩니다. <span class="ui">.html</span> 은 자동으로 붙습니다.'],
+    ['새로 생긴 파일 내용을 전부 지우고 받은 <span class="ui">Index.html</span> 내용을 붙여넣은 뒤 <span class="ui">Ctrl</span> + <span class="ui">S</span> 로 저장합니다.']
+  ],
+  warn:'이름이 <b>index</b>(소문자)나 <b>Index.html.html</b> 이 되면 화면이 안 뜹니다. 대문자 I 로 시작하는 <b>Index</b> 여야 합니다.'
+},
+{
+  id:4, kicker:'4단계', title:'초기설정 실행',
+  lead:'시트 안에 필요한 표(일정·식사·이동수단·숙소 등)를 자동으로 만들어 줍니다.',
+  scene:
+    '<div class="win"><div class="wbar"><i></i><i></i><i></i><div class="t">Apps Script</div></div>'+
+    '<div class="toolbar"><span class="tbtn">저장</span><span class="tsel">초기설정</span>'+
+      '<span class="tbtn">실행</span><span class="tbtn">디버그</span>'+
+      '<span class="tbtn blue" style="margin-left:auto">배포</span></div>'+
+    '<div class="body"><div class="editor">'+
+      '<div class="files"><div class="ft">파일<span class="plus">＋</span></div>'+
+        '<div class="fi on">Code.gs</div><div class="fi">Index.html</div></div>'+
+      '<div class="code">'+codeBody(['function 초기설정(){','  setup_();','}'])+'</div>'+
+      '<div class="drop anim" style="animation-name:appear;animation-delay:1.8s;left:26%;top:-2%">'+
+        '<b>doGet</b><b class="hot">초기설정</b><b>관리자지정</b></div>'+
+    '</div></div></div>'+
+    ring(36,11,1.6)+ring(40,20,3.2)+ring(52,11,4.6)+cur('p4'),
+  css:'@keyframes p4{0%{left:60%;top:75%}15%{left:35%;top:9.5%}25%{left:35%;top:9.5%}40%{left:39%;top:18.5%}52%{left:39%;top:18.5%}66%{left:51%;top:9.5%}100%{left:51%;top:9.5%}}',
+  acts:[
+    ['위쪽 <b>함수 선택 칸</b>을 눌러 목록을 엽니다.'],
+    ['<span class="ui go">초기설정</span> 을 고릅니다.'],
+    ['옆의 <span class="ui go">실행</span> 을 누릅니다.']
+  ],
+  warn:'실행 버튼이 회색이면 아직 저장이 안 된 것입니다. <span class="ui">Ctrl</span> + <span class="ui">S</span> 를 먼저 누르세요.'
+},
+{
+  id:5, kicker:'5단계', title:'권한 허용하기',
+  lead:'처음 실행하면 구글이 "이 스크립트가 네 시트를 만져도 되느냐"고 묻습니다. 겁먹지 않아도 됩니다.',
+  scene:
+    '<div class="win"><div class="wbar"><i></i><i></i><i></i><div class="t">Google 계정 — 권한 요청</div></div>'+
+    '<div class="body">'+
+      '<div class="modal" style="top:48%">'+
+        '<h4>이 앱은 Google에서 확인하지 않았습니다</h4>'+
+        '<p class="anim" style="animation-name:appear;animation-delay:0.2s">계속하려면 만든 사람을 신뢰하는지 확인하세요.</p>'+
+        '<div class="frow"><span class="k">고급</span><span class="v pick anim" style="animation-name:appear;animation-delay:1.6s">▾ 펼침</span></div>'+
+        '<div class="frow anim" style="animation-name:appear;animation-delay:2.6s"><span class="k">여행 상황판(으)로 이동</span><span class="v">링크</span></div>'+
+        '<div class="acts"><span class="tbtn">취소</span><span class="tbtn blue anim" style="animation-name:appear;animation-delay:4.2s">허용</span></div>'+
+      '</div>'+
+    '</div></div>'+
+    ring(26,45,1.4)+ring(35,56,2.5)+ring(70,73,4.2)+cur('p5'),
+  css:'@keyframes p5{0%{left:50%;top:85%}14%{left:25%;top:43.5%}24%{left:25%;top:43.5%}36%{left:34%;top:54.5%}48%{left:34%;top:54.5%}62%{left:69%;top:71.5%}100%{left:69%;top:71.5%}}',
+  acts:[
+    ['<span class="ui go">권한 검토</span> → 내 구글 계정을 고릅니다.'],
+    ['"확인되지 않은 앱" 경고가 뜨면 아래 <span class="ui go">고급</span> 을 누릅니다.'],
+    ['<span class="ui go">(프로젝트 이름)(으)로 이동</span> 을 누릅니다.'],
+    ['마지막으로 <span class="ui go">허용</span> 을 누릅니다.']
+  ],
+  warn:'<b>이 경고는 정상입니다.</b> 구글에 정식 등록하지 않은 개인 스크립트에는 모두 이 경고가 뜹니다. 이 코드는 <b>내 시트 안에서만</b> 움직이고, 다른 곳으로 자료를 보내지 않습니다.'
+},
+{
+  id:6, kicker:'6단계', title:'인터넷 주소 만들기',
+  lead:'가장 중요한 단계입니다. 여기서 나온 주소가 친구들에게 보낼 링크가 됩니다.',
+  scene:
+    '<div class="win"><div class="wbar"><i></i><i></i><i></i><div class="t">Apps Script — 배포</div></div>'+
+    '<div class="toolbar"><span class="tbtn">저장</span><span class="tsel">초기설정</span>'+
+      '<span class="tbtn">실행</span><span class="tbtn blue" style="margin-left:auto">배포</span></div>'+
+    '<div class="body">'+
+      '<div class="drop anim" style="animation-name:appear;animation-delay:1.5s;right:4%;top:-1%;left:auto">'+
+        '<b class="hot">새 배포</b><b>배포 관리</b><b>테스트 배포</b></div>'+
+      '<div class="modal anim" style="animation-name:appear;animation-delay:2.8s;top:52%">'+
+        '<h4>새 배포</h4>'+
+        '<div class="frow"><span class="k">유형</span><span class="v pick">웹 앱</span></div>'+
+        '<div class="frow"><span class="k">실행 계정</span><span class="v pick">나</span></div>'+
+        '<div class="frow"><span class="k">액세스 권한</span><span class="v pick">모든 사용자</span></div>'+
+        '<div class="acts"><span class="tbtn">취소</span><span class="tbtn blue">배포</span></div>'+
+      '</div>'+
+    '</div></div>'+
+    ring(88,11,1.3)+ring(82,20,2.6)+ring(72,76,5.0)+cur('p6'),
+  css:'@keyframes p6{0%{left:40%;top:80%}13%{left:87%;top:9.5%}22%{left:87%;top:9.5%}34%{left:81%;top:18.5%}46%{left:81%;top:18.5%}70%{left:71%;top:74.5%}100%{left:71%;top:74.5%}}',
+  acts:[
+    ['오른쪽 위 <span class="ui go">배포</span> → <span class="ui go">새 배포</span>.'],
+    ['톱니바퀴를 눌러 유형을 <span class="ui go">웹 앱</span> 으로 고릅니다.'],
+    ['실행 계정 <span class="ui go">나</span>, 액세스 권한 <span class="ui go">모든 사용자</span> 로 맞춥니다.'],
+    ['<span class="ui go">배포</span> 를 누르면 <span class="ui">.../exec</span> 로 끝나는 주소가 나옵니다. 복사해 두세요.']
+  ],
+  warn:'액세스 권한이 <b>"모든 사용자"</b> 가 아니면 친구들이 못 들어옵니다. 그래도 아무나 보지는 못합니다 — 링크를 열면 이름과 비밀번호를 다시 묻습니다.'
+},
+{
+  id:7, kicker:'7단계', title:'첫 로그인 — 내가 방장이 됩니다',
+  lead:'복사한 주소를 열고 들어갑니다. 처음 들어온 사람이 자동으로 관리자가 됩니다.',
+  scene:
+    '<div class="win"><div class="wbar"><i></i><i></i><i></i><div class="t">여행 상황판</div></div>'+
+    '<div class="body" style="background:var(--deep);display:flex;align-items:center;justify-content:center">'+
+      '<div style="width:66%;background:var(--surface);border-radius:8px;padding:.8em">'+
+        '<div style="font-size:.8em;letter-spacing:.15em;color:var(--ink-3)">TRIP DASHBOARD</div>'+
+        '<div style="font-family:Hahmlet,serif;font-weight:700;font-size:1.25em;margin:.1em 0 .5em">여행 상황판</div>'+
+        '<div class="field"><label>이름</label><div class="inp anim" style="animation-name:appear;animation-delay:1.6s">홍길동</div></div>'+
+        '<div class="field"><label>비밀번호</label><div class="inp anim" style="animation-name:appear;animation-delay:3.0s">••••</div></div>'+
+        '<div class="bigbtn">들어가기</div>'+
+      '</div>'+
+    '</div></div>'+
+    ring(50,44,1.5)+ring(50,63,2.9)+ring(50,80,4.4)+cur('p7'),
+  css:'@keyframes p7{0%{left:20%;top:88%}16%{left:49%;top:42.5%}30%{left:49%;top:42.5%}42%{left:49%;top:61.5%}56%{left:49%;top:61.5%}68%{left:49%;top:78.5%}100%{left:49%;top:78.5%}}',
+  acts:[
+    ['복사한 주소를 브라우저 주소창에 붙여넣고 엽니다.'],
+    ['<b>이름</b> 칸에 참석자명단에 적힌 이름을 그대로 칩니다. 한글로 치면 됩니다.'],
+    ['<b>비밀번호</b> 는 기본값 <span class="ui">0000</span> 입니다.'],
+    ['<span class="ui go">들어가기</span> — 처음 들어온 사람이 그 여행의 <b>관리자</b>가 됩니다.']
+  ],
+  warn:'"명단에 없는 이름입니다" 가 뜨면, 참석자명단 A열의 이름과 <b>띄어쓰기까지</b> 같은지 확인하세요.'
+},
+{
+  id:8, kicker:'8단계', title:'비밀번호 정하고 링크 뿌리기',
+  lead:'마지막입니다. 우리 팀이 쓸 기본 비밀번호를 정하고, 링크와 QR을 친구들에게 보냅니다.',
+  scene:
+    '<div class="win"><div class="wbar"><i></i><i></i><i></i><div class="t">여행 상황판 — 설정</div></div>'+
+    '<div class="appbar">2026년 11월 여행</div>'+
+    '<div class="apptabs"><span>대시보드</span><span>정산</span><span>일정</span><span>숙소</span><span class="on">설정</span></div>'+
+    '<div class="body"><div class="formcard">'+
+      '<div style="font-size:.8em;letter-spacing:.12em;color:var(--ink-3);margin-bottom:.3em">링크 공유</div>'+
+      '<div class="urlbox"><span>https://script.google.com/…/exec</span><span class="tbtn">복사</span></div>'+
+      '<div style="font-size:.8em;letter-spacing:.12em;color:var(--ink-3);margin:.7em 0 .3em">관리자</div>'+
+      '<div class="frow" style="display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:.35em">'+
+        '<span style="color:var(--ink-2)">기본 비밀번호</span>'+
+        '<span class="v anim" style="animation-name:appear;animation-delay:3.0s;border:1px solid var(--line-2);border-radius:5px;padding:.1em .5em">1234</span>'+
+        '<span class="tbtn">변경</span></div>'+
+    '</div></div></div>'+
+    ring(80,45,1.5)+ring(86,72,3.4)+cur('p8'),
+  css:'@keyframes p8{0%{left:30%;top:85%}18%{left:79%;top:43.5%}34%{left:79%;top:43.5%}54%{left:85%;top:70.5%}100%{left:85%;top:70.5%}}',
+  acts:[
+    ['위쪽 <span class="ui go">설정</span> 탭으로 갑니다.'],
+    ['<span class="ui go">링크 복사</span> 로 주소를 복사해 단톡방에 붙여넣습니다. 옆의 <span class="ui">QR</span> 을 쓰면 찍기만 해도 됩니다.'],
+    ['관리자 칸의 <b>기본 비밀번호</b> 에서 <span class="ui go">변경</span> 을 눌러 우리 팀이 쓸 번호로 바꿉니다. (0000 이든 1234 든 원하는 대로)'],
+    ['친구들에게 "이름은 본인 이름, 비밀번호는 ○○○○" 이라고만 알려주면 끝입니다.']
+  ],
+  warn:'이미 자기 비밀번호를 정한 사람은 기본 비밀번호를 바꿔도 영향을 받지 않습니다. 아직 안 정한 사람만 새 번호로 들어옵니다.'
+}
+];
+
+/* ====== 그리기 ====== */
+var cssBox = document.createElement('style');
+cssBox.textContent = STEPS.map(function(s){ return s.css; }).join('\n');
+document.head.appendChild(cssBox);
+
+var LS = 'tripGuideDone';
+var done = {};
+try{ done = JSON.parse(localStorage.getItem(LS) || '{}'); }catch(e){ done = {}; }
+var at = 0;
+try{ at = Math.min(Number(localStorage.getItem('tripGuideAt')||0), STEPS.length-1); }catch(e){}
+
+function save(){
+  try{
+    localStorage.setItem(LS, JSON.stringify(done));
+    localStorage.setItem('tripGuideAt', String(at));
+  }catch(e){}
+}
+function esc(s){ return String(s==null?'':s); }
+
+function paintStrip(){
+  document.getElementById('strip').innerHTML = STEPS.map(function(s,i){
+    return '<button class="pill'+(done[s.id]?' done':'')+'" data-go="'+i+'"'+
+      (i===at?' aria-current="true"':'')+'>'+
+      '<span class="dot">'+(done[s.id]?'✓':(i+1))+'</span>'+esc(s.title)+'</button>';
+  }).join('');
+  var n = Object.keys(done).filter(function(k){return done[k]}).length;
+  document.getElementById('fill').style.width = (n/STEPS.length*100)+'%';
+  document.getElementById('progN').textContent = n+' / '+STEPS.length;
+  var cur = document.querySelector('.pill[aria-current="true"]');
+  if(cur) cur.scrollIntoView({block:'nearest', inline:'center'});
+}
+
+function paintStage(){
+  var s = STEPS[at];
+  document.getElementById('stage').innerHTML =
+    '<div class="kicker">'+(at+1)+'단계</div>'+
+    '<h2>'+esc(s.title)+'</h2>'+
+    '<p class="lead">'+esc(s.lead)+'</p>'+
+    '<div class="demo"><div class="cap">움직이는 화면 — 실제 구글 화면과 같은 자리입니다'+
+      '<button class="replay" id="replay">다시 재생</button></div>'+
+      '<div class="scene" id="scene">'+s.scene+'</div></div>'+
+    '<div class="explain">'+
+      s.acts.map(function(a,i){
+        return '<div class="act"><span class="idx">'+(i+1)+'</span><span class="tx">'+a[0]+'</span></div>';
+      }).join('')+
+      (s.warn ? '<div class="warn">'+s.warn+'</div>' : '')+
+    '</div>';
+  document.getElementById('prev').disabled = (at===0);
+  document.getElementById('next').textContent =
+    done[s.id] ? (at===STEPS.length-1 ? '처음으로' : '다음 단계') : (at===STEPS.length-1 ? '설치 끝!' : '이 단계 완료');
+  document.getElementById('doneNote').hidden = !done[s.id];
+  document.getElementById('replay').onclick = replay;
+  play();
+}
+function play(){
+  var sc = document.getElementById('scene');
+  if(sc) requestAnimationFrame(function(){ sc.classList.add('play'); });
+}
+function replay(){
+  var sc = document.getElementById('scene');
+  if(!sc) return;
+  sc.classList.remove('play');
+  void sc.offsetWidth;               // 애니메이션 초기화
+  sc.classList.add('play');
+}
+function go(i){
+  at = Math.max(0, Math.min(i, STEPS.length-1));
+  save(); paintStrip(); paintStage();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+document.getElementById('strip').addEventListener('click', function(e){
+  var b = e.target.closest('[data-go]');
+  if(b) go(Number(b.dataset.go));
+});
+document.getElementById('prev').onclick = function(){ go(at-1); };
+document.getElementById('next').onclick = function(){
+  done[STEPS[at].id] = true;
+  if(at === STEPS.length-1){ save(); paintStrip(); paintStage(); }
+  else go(at+1);
+};
+
+paintStrip();
+paintStage();
+</script>
+</body>
+</html>

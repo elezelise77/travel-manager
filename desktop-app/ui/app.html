@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>여행 상황판</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --ground:#F0F2EE; --surface:#FFFFFF; --sunken:#F7F8F5;
+  --ink:#151917; --ink-2:#4C554F; --ink-3:#7E877F;
+  --line:#DCE0D8; --line-2:#C5CCC1;
+  --deep:#1E4A3D; --deep-ink:#E9F1EC; --deep-line:#2F6252; --cream:#F3E9D6;
+  --accent:#2C6150; --accent-soft:#DEEAE3; --accent-ink:#1C463A;
+  --good:#2F7D53; --warm:#A35E27; --crit:#AE3830;
+  --r:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--ground);color:var(--ink);
+  font-family:"Malgun Gothic","맑은 고딕",system-ui,sans-serif;font-size:14px;line-height:1.6}
+button{font:inherit;color:inherit}
+h1,h2{margin:0;letter-spacing:-.02em}
+.hidden{display:none!important}
+
+/* 툴바 */
+#bar{height:46px;background:var(--deep);color:var(--deep-ink);display:flex;align-items:center;
+  gap:8px;padding:0 12px;-webkit-app-region:drag}
+#bar *{-webkit-app-region:no-drag}
+#bar .name{font-weight:700;font-size:14px;margin-right:4px;white-space:nowrap}
+#bar select{background:rgba(255,255,255,.1);color:var(--deep-ink);border:1px solid var(--deep-line);
+  border-radius:7px;padding:4px 8px;font-size:12.5px;max-width:240px}
+#bar select option{color:#111}
+.tb{background:transparent;border:1px solid var(--deep-line);color:var(--deep-ink);
+  border-radius:7px;padding:5px 10px;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.tb:hover{background:rgba(255,255,255,.12)}
+.tb.right{margin-left:auto}
+
+/* 본문 */
+#frameWrap{position:absolute;inset:46px 0 0 0}
+iframe{width:100%;height:100%;border:0;background:var(--ground)}
+
+/* 업데이트 알림 띠 */
+#updBar{position:absolute;left:0;right:0;top:46px;z-index:5;display:flex;gap:10px;align-items:center;
+  flex-wrap:wrap;padding:9px 14px;background:var(--cream);border-bottom:1px solid rgba(163,94,39,.4);
+  color:#5C3A14;font-size:13px}
+#updBar .btn.tiny{margin-left:auto}
+#updBar .btn.tiny + .btn.tiny{margin-left:0}
+body.hasupd #frameWrap,body.hasupd #frameFail{top:88px}
+.btn.tiny{padding:4px 10px;font-size:12.5px;border-radius:7px}
+#updDlg{width:min(560px,94vw)}
+
+#frameFail{position:absolute;inset:46px 0 0 0;background:var(--deep);overflow:auto;padding:28px 20px}
+.failbox{max-width:520px;margin:0 auto;background:var(--surface);border-radius:16px;padding:28px}
+.failbox h1{font-size:21px;margin-top:6px}
+.failbox .lead{color:var(--ink-2);font-size:13.5px;margin:10px 0 20px}
+.btn.ghost{background:var(--sunken);color:var(--ink-2);border:1px solid var(--line-2)}
+
+/* 마법사 */
+#wizard{position:absolute;inset:0;background:var(--deep);overflow:auto;padding:28px 20px}
+.sheet{max-width:680px;margin:0 auto;background:var(--surface);border-radius:16px;padding:28px}
+.eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.sheet h1{font-size:24px;margin-top:6px}
+.sheet .lead{color:var(--ink-2);font-size:13.5px;margin:10px 0 22px}
+
+.step{display:flex;gap:14px;padding:16px 0;border-top:1px solid var(--line)}
+.step:first-of-type{border-top:0}
+.step .no{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:0 0 auto}
+.step .body{flex:1;min-width:0}
+.step .body > b{display:block;font-size:15px;margin-bottom:4px}   /* 단계 제목만 블록 */
+.step .body p{margin:0 0 8px;color:var(--ink-2);font-size:13px}
+.step .body .kbd{display:inline-block;background:var(--sunken);border:1px solid var(--line-2);
+  border-radius:5px;padding:1px 6px;font-size:12px;margin:0 1px}
+.warn{background:#FDF3E6;border:1px solid rgba(163,94,39,.35);color:#6A3D12;
+  border-radius:10px;padding:10px 13px;font-size:12.5px;margin-top:8px}
+.codestep{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px;
+  padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--sunken)}
+.codestep .cs{flex:1;min-width:190px;font-size:13px}
+.codestep .cs > b{display:block;margin-bottom:3px}
+.codestep .mini{display:block;line-height:1.7}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;
+  border:1px solid var(--line-2);background:var(--surface);cursor:pointer;font-size:13.5px}
+.btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08);color:#fff}
+.btn.block{width:100%;justify-content:center;padding:11px}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;align-items:center}
+.row input{flex:1}
+input,select{width:100%;padding:9px 11px;border:1px solid var(--line-2);border-radius:9px;
+  background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+label.f{display:block;font-size:12px;color:var(--ink-2);margin-bottom:5px;font-weight:600}
+.msg{font-size:12.5px;margin-top:8px;min-height:18px}
+.msg.ok{color:var(--good)} .msg.bad{color:var(--crit)}
+.sep{height:1px;background:var(--line);margin:20px 0}
+.mini{font-size:12px;color:var(--ink-3)}
+
+/* 팝업 */
+dialog{border:1px solid var(--line);border-radius:14px;padding:0;width:min(420px,92vw);background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(8,12,10,.55)}
+dialog .dh{padding:16px 18px 0;font-weight:700;font-size:16px}
+dialog .db{padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px}
+dialog .df{display:flex;justify-content:flex-end;gap:8px}
+#qrHolder{display:flex;justify-content:center;padding:8px;background:#fff;border-radius:10px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#151917;color:#F0F2EE;
+  padding:9px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .18s;pointer-events:none;z-index:50}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- ===== 상단 툴바 ===== -->
+<div id="bar" class="hidden">
+  <span class="name">여행 상황판</span>
+  <select id="roomSel" title="여행방 선택"></select>
+  <button class="tb" id="btnReload">새로고침</button>
+  <button class="tb" id="btnNewWin">새 창</button>
+  <button class="tb" id="btnCopy">링크 복사</button>
+  <button class="tb" id="btnQr">QR</button>
+  <button class="tb" id="btnBrowser">브라우저로 열기</button>
+  <button class="tb right" id="btnCheck">점검</button>
+  <button class="tb" id="btnBackup">백업 저장</button>
+  <button class="tb" id="btnAdd">＋ 여행방</button>
+</div>
+<div id="frameWrap" class="hidden"><iframe id="frame" src="about:blank"></iframe></div>
+
+<div id="updBar" class="hidden">
+  <span><b>새 버전이 있습니다</b> — 이 앱에는 <b id="updNew">—</b>, 지금 시트에는 <b id="updOld">—</b> 가 들어 있습니다.</span>
+  <button class="btn tiny" id="updHow">올리는 법 보기</button>
+  <button class="btn tiny ghost" id="updSkip">나중에</button>
+</div>
+
+<dialog id="updDlg"><div class="dh">웹앱 업데이트</div><div class="db">
+  <div class="mini">시트에 들어 있는 코드를 새 버전으로 바꿉니다. 자료(지출·일정·사진)는 그대로 있습니다.</div>
+
+  <div class="codestep" style="background:transparent;border-style:dashed">
+    <div class="cs"><b>① Apps Script 열기</b>
+      <span class="mini">내 구글시트에서 <span class="kbd">확장 프로그램</span> → <span class="kbd">Apps Script</span></span></div>
+  </div>
+
+  <div class="codestep">
+    <div class="cs"><b>② Code.gs 바꾸기</b>
+      <span class="mini">왼쪽에서 <b>Code.gs</b> 클릭 → 편집창에서 <span class="kbd">Ctrl</span>+<span class="kbd">A</span> →
+        붙여넣기 → <span class="kbd">Ctrl</span>+<span class="kbd">S</span></span></div>
+    <button class="btn" id="updCopyCode">Code.gs 복사</button>
+  </div>
+
+  <div class="codestep">
+    <div class="cs"><b>③ Index.html 바꾸기</b>
+      <span class="mini">왼쪽에서 <b>Index</b> 클릭 → <span class="kbd">Ctrl</span>+<span class="kbd">A</span> →
+        붙여넣기 → <span class="kbd">Ctrl</span>+<span class="kbd">S</span></span></div>
+    <button class="btn" id="updCopyIndex">Index.html 복사</button>
+  </div>
+
+  <div class="warn"><b>④ 마지막이 제일 중요합니다.</b><br>
+    <span class="kbd">배포</span> → <span class="kbd">배포 관리</span> → 연필(✏️) →
+    버전 <b>새 버전</b> → <span class="kbd">배포</span><br>
+    이걸 빼먹으면 화면이 그대로입니다. <b>새 배포</b>를 누르면 주소가 바뀌어 친구들 링크가 끊기니 꼭
+    <b>배포 관리</b>의 연필을 쓰세요.</div>
+
+  <div class="df">
+    <button class="btn" id="updDone">다 했습니다 — 다시 확인</button>
+    <button class="btn" onclick="document.getElementById('updDlg').close()">닫기</button>
+  </div>
+</div></dialog>
+
+<div id="frameFail" class="hidden">
+  <div class="failbox">
+    <div class="eyebrow">화면을 앱 안에 못 열었습니다</div>
+    <h1>새 창으로 열어드릴까요?</h1>
+    <p class="lead">앱 안쪽 화면은 구글이 막는 경우가 있습니다. 새 창으로 열면 똑같이 쓸 수 있습니다.
+      내용·자료는 전부 같은 구글시트라 달라지는 것은 없습니다.</p>
+    <button class="btn block" id="failWin">새 창으로 열기</button>
+    <button class="btn block ghost" id="failBrowser" style="margin-top:8px">기본 브라우저로 열기</button>
+    <button class="btn block ghost" id="failRetry" style="margin-top:8px">앱 안에서 다시 시도</button>
+    <div class="mini" id="failWhy" style="margin-top:12px;word-break:break-all"></div>
+  </div>
+</div>
+
+<!-- ===== 설치 마법사 ===== -->
+<div id="wizard">
+  <div class="sheet">
+    <div class="eyebrow">TRIP BOARD SETUP</div>
+    <h1>여행방 만들기</h1>
+    <p class="lead">아래 순서대로 한 번만 하면 됩니다. 만들어진 주소를 친구들에게 보내면, 친구들은 아무것도 설치하지 않고 링크만 눌러 씁니다.
+      모든 자료는 <b>내 구글 계정에 새로 만든 시트</b>에 저장됩니다. 남의 시트를 복사하는 게 아니라, 빈 시트에서 시작합니다.</p>
+    <button class="btn block" id="btnGuide" style="margin-bottom:18px">
+      ▶ 움직이는 그림으로 보기 — 어느 버튼을 누르는지 화면으로 보여드립니다</button>
+
+    <div class="step">
+      <div class="no">1</div>
+      <div class="body">
+        <b>빈 구글시트 만들기</b>
+        <p>아래 버튼을 누르면 브라우저에 <b>새 스프레드시트</b>가 하나 만들어집니다.
+          왼쪽 위 제목을 <span class="kbd">우리 여행</span> 처럼 알아보기 쉽게 바꿔두세요.</p>
+        <button class="btn primary" id="btnNewSheet">빈 시트 만들기</button>
+        <div class="mini" style="margin-top:8px">이미 만들어 둔 시트를 쓰셔도 됩니다.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="no">2</div>
+      <div class="body">
+        <b>코드 두 개 붙여넣기</b>
+        <p>시트 위쪽 메뉴 <span class="kbd">확장 프로그램</span> → <span class="kbd">Apps Script</span> 를 누릅니다.
+          아래 버튼으로 코드를 복사해서 차례대로 붙여넣으세요.</p>
+
+        <div class="codestep">
+          <div class="cs"><b>① Code.gs</b>
+            <span class="mini">편집창을 클릭하고 <span class="kbd">Ctrl</span>+<span class="kbd">A</span> → 붙여넣기 → <span class="kbd">Ctrl</span>+<span class="kbd">S</span></span></div>
+          <button class="btn" id="btnCopyCode">Code.gs 복사</button>
+        </div>
+
+        <div class="codestep">
+          <div class="cs"><b>② Index.html</b>
+            <span class="mini">왼쪽 <span class="kbd">파일</span> 옆 <span class="kbd">＋</span> → <span class="kbd">HTML</span> →
+              이름을 <b>Index</b> 로 (뒤에 .html 은 붙이지 않습니다) → 붙여넣기 → <span class="kbd">Ctrl</span>+<span class="kbd">S</span></span></div>
+          <button class="btn" id="btnCopyIndex">Index.html 복사</button>
+        </div>
+
+        <div class="warn">파일 이름은 반드시 <b>Index</b> 여야 합니다. 대소문자도 그대로입니다.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="no">3</div>
+      <div class="body">
+        <b>인터넷 주소 만들기 (배포)</b>
+        <p>같은 Apps Script 화면 오른쪽 위 <span class="kbd">배포</span> → <span class="kbd">새 배포</span> →
+          톱니바퀴에서 <span class="kbd">웹 앱</span> 선택 →
+          실행 계정 <b>나</b>, 액세스 권한 <b>모든 사용자</b> → <span class="kbd">배포</span>.</p>
+        <div class="warn">처음 배포하면 권한을 묻는 창이 뜹니다.
+          <b>액세스 승인 → 내 계정 → 고급 → (프로젝트 이름)(으)로 이동 → 허용</b> 순서로 눌러주세요.
+          내 시트와 내 드라이브(사진 저장)에만 접근하는 권한입니다.<br><br>
+          액세스 권한을 <b>모든 사용자</b>로 해야 친구들이 구글 로그인 없이 들어올 수 있습니다.
+          그래도 아무나 못 봅니다 — 앱 안에서 이름과 비밀번호로 다시 확인합니다.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="no">4</div>
+      <div class="body">
+        <b>나온 주소를 여기에 붙여넣기</b>
+        <p>배포가 끝나면 <span class="kbd">웹 앱 URL</span> 이 나옵니다. 복사해서 아래에 넣고 연결하세요.</p>
+        <label class="f" for="newUrl">웹 앱 주소</label>
+        <input type="text" id="newUrl" placeholder="https://script.google.com/macros/s/...../exec">
+        <label class="f" for="newName" style="margin-top:10px">이 여행방 이름 (내가 알아보기 쉽게)</label>
+        <input type="text" id="newName" placeholder="예) 2026 11월 친구 여행">
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" id="btnConnect">연결하고 시작하기</button>
+          <button class="btn" id="btnCancelWiz">취소</button>
+        </div>
+        <div class="msg" id="wizMsg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<dialog id="chkDlg"><div class="dh">연결 점검</div><div class="db">
+  <div id="chkBody" class="mini" style="word-break:break-all;white-space:pre-wrap">확인하는 중…</div>
+  <div class="df"><button class="btn" onclick="document.getElementById('chkDlg').close()">닫기</button></div>
+</div></dialog>
+
+<dialog id="qrDlg"><div class="dh">QR 코드</div><div class="db">
+  <div id="qrHolder"></div>
+  <div class="mini" id="qrUrl" style="word-break:break-all"></div>
+  <div class="df"><button class="btn" onclick="document.getElementById('qrDlg').close()">닫기</button></div>
+</div></dialog>
+
+<dialog id="loginDlg"><div class="dh">백업을 받으려면 관리자 확인이 필요합니다</div><div class="db">
+  <div><label class="f" for="bkName">이름</label><input type="text" id="bkName" placeholder="예) 홍길동"></div>
+  <div><label class="f" for="bkPw">비밀번호</label><input type="password" id="bkPw"></div>
+  <div class="msg" id="bkMsg"></div>
+  <div class="df">
+    <button class="btn" id="bkCancel">취소</button>
+    <button class="btn primary" id="bkGo">백업 저장</button>
+  </div>
+</div></dialog>
+
+<dialog id="roomsDlg"><div class="dh">여행방 관리</div><div class="db">
+  <div id="roomList"></div>
+  <div class="df">
+    <button class="btn" id="roomsClose">닫기</button>
+    <button class="btn primary" id="roomsNew">＋ 새 여행방 만들기</button>
+  </div>
+</div></dialog>
+
+<div id="toast"></div>
+
+<script>
+/* 이 앱은 남의 시트를 복사하게 하지 않습니다.
+   쓰는 사람이 자기 계정에 빈 시트를 만들고, 여기 code/ 폴더의 코드를 붙여넣는 방식입니다.
+   그래서 템플릿 시트 주소를 앱에 넣어둘 필요가 없습니다. */
+
+var CFG = { rooms: [], current: -1 };
+var $ = function(s){ return document.querySelector(s); };
+function toast(m){ var t=$("#toast"); t.textContent=m; t.classList.add("on");
+  clearTimeout(t._x); t._x=setTimeout(function(){ t.classList.remove("on"); },2400); }
+function room(){ return CFG.rooms[CFG.current] || null; }
+
+/* ---------- 화면 전환 ---------- */
+function showWizard(show){
+  $("#wizard").classList.toggle("hidden", !show);
+  $("#bar").classList.toggle("hidden", show);
+  $("#frameWrap").classList.toggle("hidden", show);
+  if(show){ $("#frameFail").classList.add("hidden"); showUpd(false); }
+}
+function paintRooms(){
+  var sel = $("#roomSel");
+  sel.innerHTML = CFG.rooms.map(function(r,i){
+    return '<option value="'+i+'"'+(i===CFG.current?' selected':'')+'>'+escapeHtml(r.name)+'</option>';
+  }).join("");
+}
+function escapeHtml(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+/* ---------- 안쪽 화면 열기 · 실패 감시 ---------- */
+var frameTimer = null, frameOk = false, lastFailWhy = "";
+
+function showFail(why){
+  if(why) lastFailWhy = why;
+  frameOk = false;
+  clearTimeout(frameTimer);
+  $("#frame").src = "about:blank";
+  $("#frameWrap").classList.add("hidden");
+  $("#frameFail").classList.remove("hidden");
+  $("#failWhy").textContent = lastFailWhy ? ("사유: " + lastFailWhy) : "";
+}
+function hideFail(){ $("#frameFail").classList.add("hidden"); }
+
+function loadFrame(url){
+  hideFail();
+  frameOk = false;
+  $("#frameWrap").classList.remove("hidden");
+  var f = $("#frame");
+  f.onload = function(){ frameOk = true; clearTimeout(frameTimer); };
+  /* 캐시된 옛 화면이 남지 않게 매번 다른 주소로 요청한다 */
+  f.src = url + (url.indexOf("?") >= 0 ? "&" : "?") + "_=" + Date.now();
+  clearTimeout(frameTimer);
+  frameTimer = setTimeout(function(){
+    if(!frameOk) showFail("15초 안에 화면이 열리지 않았습니다");
+  }, 15000);
+}
+
+if(window.trip && window.trip.onFrameFail){
+  window.trip.onFrameFail(function(d){
+    showFail((d && d.desc ? d.desc : "알 수 없는 오류") + " (" + (d && d.code) + ")");
+  });
+}
+
+function openRoom(i){
+  if(i<0 || i>=CFG.rooms.length) return;
+  CFG.current = i;
+  window.trip.setConfig(CFG);
+  paintRooms();
+  showWizard(false);
+  loadFrame(CFG.rooms[i].url);
+  checkVersion();
+}
+
+/* ---------- 웹앱 업데이트 안내 ----------
+ * 앱에 동봉된 코드의 버전과, 시트에 실제로 올라가 있는 버전(ping)을 비교한다.
+ * 다르면 붙여넣는 방법을 화면으로 안내한다. (자동으로 올려주지는 않는다) */
+var NEWVER = "", SKIPPED = {};
+function verNum(v){
+  return String(v||"0").split(".").map(Number).reduce(function(a,n){ return a*1000+(n||0) },0);
+}
+async function checkVersion(){
+  if(!room()) return;
+  showUpd(false);
+  try{
+    if(!NEWVER) NEWVER = await window.trip.codeVersion();
+    if(!NEWVER) return;
+    var r = await window.trip.api(room().url, { action:"ping" });
+    if(!r || !r.ok) return;
+    var cur = r.version || "";
+    if(cur && verNum(cur) >= verNum(NEWVER)) return;
+    if(SKIPPED[room().url] === NEWVER) return;
+    $("#updNew").textContent = "v"+NEWVER;
+    $("#updOld").textContent = cur ? "v"+cur : "예전 버전";
+    showUpd(true);
+  }catch(e){}
+}
+function showUpd(on){
+  $("#updBar").classList.toggle("hidden", !on);
+  document.body.classList.toggle("hasupd", !!on);
+}
+$("#updHow").onclick  = function(){ $("#updDlg").showModal(); };
+$("#updSkip").onclick = function(){ if(room()) SKIPPED[room().url]=NEWVER; showUpd(false); };
+$("#updCopyCode").onclick  = function(){ copyCode("code", this) };
+$("#updCopyIndex").onclick = function(){ copyCode("index", this) };
+$("#updDone").onclick = async function(){
+  $("#updDlg").close();
+  try{ await window.trip.clearCache(); }catch(e){}
+  if(room()) loadFrame(room().url);
+  await checkVersion();
+  if($("#updBar").classList.contains("hidden")) toast("업데이트됐습니다");
+  else toast("아직 예전 버전입니다 — 배포 관리에서 [새 버전]으로 배포했는지 확인해 주세요");
+};
+
+$("#failWin").onclick = function(){
+  if(!room()) return;
+  window.trip.roomWindow(room().url, room().name);
+  toast("새 창으로 열었습니다");
+};
+$("#failBrowser").onclick = function(){ if(room()) window.trip.openUrl(room().url); };
+$("#failRetry").onclick = async function(){
+  if(!room()) return;
+  try{ await window.trip.clearCache(); }catch(e){}
+  lastFailWhy = "";
+  loadFrame(room().url);
+};
+
+/* ---------- 시작 ---------- */
+(async function init(){
+  CFG = await window.trip.getConfig();
+  if(!CFG || !CFG.rooms) CFG = { rooms: [], current: -1 };
+  if(CFG.rooms.length){
+    openRoom(CFG.current >= 0 ? CFG.current : 0);
+  }else{
+    showWizard(true);
+  }
+})();
+
+/* ---------- 마법사 ---------- */
+$("#btnGuide").onclick = function(){ window.trip.openGuide(); };
+$("#btnNewSheet").onclick = function(){ window.trip.openUrl("https://sheets.new"); };
+
+async function copyCode(which, btn){
+  var r = await window.trip.copyCode(which);
+  if(r && r.ok){
+    toast(r.label + " 를 복사했습니다 — Apps Script 에 붙여넣으세요");
+    if(btn){ var t=btn.textContent; btn.textContent="복사됨 ✓";
+             setTimeout(function(){ btn.textContent=t },1800); }
+  }else toast((r && r.error) || "복사하지 못했습니다");
+}
+$("#btnCopyCode").onclick  = function(){ copyCode("code", this) };
+$("#btnCopyIndex").onclick = function(){ copyCode("index", this) };
+$("#btnCancelWiz").onclick = function(){
+  if(CFG.rooms.length) openRoom(CFG.current >= 0 ? CFG.current : 0);
+  else toast("먼저 여행방을 하나 만들어 주세요");
+};
+$("#btnConnect").onclick = async function(){
+  var url = $("#newUrl").value.trim();
+  var name = $("#newName").value.trim();
+  var msg = $("#wizMsg");
+  msg.className = "msg";
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(url)){
+    msg.className = "msg bad";
+    msg.textContent = "주소 형태가 다릅니다. /exec 로 끝나는 웹 앱 URL 을 넣어주세요.";
+    return;
+  }
+  msg.textContent = "연결하는 중…";
+  this.disabled = true;
+  var res = await window.trip.api(url, { action: "ping" });
+  this.disabled = false;
+  if(!res || !res.ok){
+    msg.className = "msg bad";
+    msg.textContent = (res && res.error) || "연결하지 못했습니다. 3번(배포) 단계를 다시 확인해 주세요.";
+    return;
+  }
+  CFG.rooms.push({ name: name || res.title || "내 여행방", url: url, addedAt: new Date().toISOString() });
+  CFG.current = CFG.rooms.length - 1;
+  await window.trip.setConfig(CFG);
+  msg.className = "msg ok";
+  msg.textContent = "연결됐습니다.";
+  $("#newUrl").value = ""; $("#newName").value = "";
+  openRoom(CFG.current);
+  toast("여행방이 준비됐습니다");
+};
+
+/* ---------- 툴바 ---------- */
+$("#roomSel").onchange = function(){ openRoom(Number(this.value)); };
+$("#btnReload").onclick = async function(){
+  if(!room()) return;
+  try{ await window.trip.clearCache(); }catch(e){}
+  loadFrame(room().url);
+  toast("새로고침했습니다");
+};
+$("#btnNewWin").onclick = function(){
+  if(!room()) return;
+  window.trip.roomWindow(room().url, room().name);
+  toast("새 창으로 열었습니다");
+};
+$("#btnBrowser").onclick = function(){ if(room()) window.trip.openUrl(room().url); };
+$("#btnCopy").onclick = async function(){
+  if(!room()) return;
+  await window.trip.copy(room().url);
+  toast("링크를 복사했습니다 — 카톡에 붙여넣으세요");
+};
+$("#btnQr").onclick = function(){
+  if(!room()) return;
+  var holder = $("#qrHolder");
+  holder.innerHTML = "";
+  $("#qrUrl").textContent = room().url;
+  if(window.QRCode){
+    try{ new QRCode(holder, { text: room().url, width: 200, height: 200 }); }
+    catch(e){ holder.textContent = "QR 을 만들지 못했습니다"; }
+  }else{
+    holder.textContent = "인터넷에 연결되면 QR 이 표시됩니다";
+  }
+  $("#qrDlg").showModal();
+};
+$("#btnAdd").onclick = function(){ showRooms(); };
+
+$("#btnCheck").onclick = async function(){
+  var b = $("#chkBody");
+  b.textContent = "확인하는 중…";
+  $("#chkDlg").showModal();
+  var lines = [];
+  try{
+    var i = await window.trip.info();
+    lines.push("앱 버전 : " + i.version);
+    lines.push("Chrome  : " + i.chrome);
+  }catch(e){ lines.push("앱 정보를 읽지 못했습니다"); }
+  if(!room()){
+    lines.push("", "열려 있는 여행방이 없습니다.");
+  }else{
+    lines.push("", "주소 : " + room().url);
+    var r = await window.trip.api(room().url, { action: "ping" });
+    if(r && r.ok){
+      lines.push("연결 : 정상");
+      lines.push("서버 버전 : " + (r.version || "구버전 (Code.gs 를 다시 붙여넣으세요)"));
+      lines.push("여행 이름 : " + (r.title || "-"));
+    }else{
+      lines.push("연결 : 실패");
+      lines.push((r && r.error) || "응답이 없습니다");
+    }
+    lines.push("안쪽 화면 : " + (frameOk ? "정상" : (lastFailWhy || "아직 안 열림")));
+    lines.push("", "※ 위 주소가 브라우저에서 쓰는 주소와 다르면,");
+    lines.push("   옛 배포가 등록된 것입니다. [＋ 여행방] 에서 지우고 새 주소로 다시 넣으세요.");
+  }
+  b.textContent = lines.join("\n");
+};
+
+/* ---------- 여행방 관리 ---------- */
+function showRooms(){
+  $("#roomList").innerHTML = CFG.rooms.length ? CFG.rooms.map(function(r,i){
+    return '<div class="row" style="padding:8px 0;border-top:1px solid var(--line)">'+
+      '<div style="flex:1;min-width:0"><b>'+escapeHtml(r.name)+'</b>'+
+      '<div class="mini" style="word-break:break-all">'+escapeHtml(r.url)+'</div></div>'+
+      '<button class="btn" data-open="'+i+'">열기</button>'+
+      '<button class="btn" data-del="'+i+'">삭제</button></div>';
+  }).join("") : '<div class="mini">아직 만든 여행방이 없습니다.</div>';
+  $("#roomsDlg").showModal();
+}
+$("#roomsClose").onclick = function(){ $("#roomsDlg").close(); };
+$("#roomsNew").onclick = function(){ $("#roomsDlg").close(); showWizard(true); };
+$("#roomList").onclick = async function(e){
+  var b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.open !== undefined){ $("#roomsDlg").close(); openRoom(Number(b.dataset.open)); return; }
+  if(b.dataset.del !== undefined){
+    var i = Number(b.dataset.del);
+    if(!confirm("목록에서 지울까요? 구글시트의 자료는 그대로 남습니다.")) return;
+    CFG.rooms.splice(i,1);
+    if(CFG.current >= CFG.rooms.length) CFG.current = CFG.rooms.length - 1;
+    await window.trip.setConfig(CFG);
+    paintRooms(); showRooms();
+    if(!CFG.rooms.length){ $("#roomsDlg").close(); showWizard(true); }
+    else openRoom(CFG.current < 0 ? 0 : CFG.current);
+  }
+};
+
+/* ---------- 백업 ---------- */
+$("#btnBackup").onclick = function(){
+  if(!room()) return;
+  $("#bkMsg").textContent = ""; $("#bkMsg").className = "msg";
+  $("#loginDlg").showModal();
+};
+$("#bkCancel").onclick = function(){ $("#loginDlg").close(); };
+$("#bkGo").onclick = async function(){
+  var msg = $("#bkMsg"); msg.className = "msg"; msg.textContent = "확인하는 중…";
+  this.disabled = true;
+  var lg = await window.trip.api(room().url, { action:"login", name:$("#bkName").value.trim(), pw:$("#bkPw").value });
+  if(!lg || !lg.ok){
+    this.disabled = false;
+    msg.className = "msg bad"; msg.textContent = (lg && lg.error) || "로그인하지 못했습니다";
+    return;
+  }
+  var bk = await window.trip.api(room().url, { action:"backup", token: lg.result.token });
+  this.disabled = false;
+  if(!bk || !bk.ok){
+    msg.className = "msg bad"; msg.textContent = (bk && bk.error) || "백업을 받지 못했습니다";
+    return;
+  }
+  var stamp = new Date().toISOString().slice(0,10);
+  var r = await window.trip.saveBackup((room().name || "여행") + "_백업_" + stamp + ".json", bk.result);
+  if(r.ok){ $("#loginDlg").close(); $("#bkPw").value=""; toast("백업을 저장했습니다"); }
+  else if(!r.canceled){ msg.className="msg bad"; msg.textContent = r.error || "파일을 저장하지 못했습니다"; }
+};
+</script>
+</body>
+</html>

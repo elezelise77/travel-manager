@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<title>여행 상황판</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@400;500;700&family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --ground:#F0F2EE; --surface:#FFFFFF; --surface-2:#E7EAE3; --sunken:#F7F8F5;
+  --ink:#151917; --ink-2:#4C554F; --ink-3:#7E877F;
+  --line:#DCE0D8; --line-2:#C5CCC1;
+  --deep:#1E4A3D; --deep-ink:#E9F1EC; --deep-line:#2F6252; --cream:#F3E9D6;
+  --accent:#2C6150; --accent-soft:#DEEAE3; --accent-ink:#1C463A;
+  --gold:#9A7B3F; --gold-soft:#F1E8D6;
+  --good:#2F7D53; --warm:#A35E27; --crit:#AE3830;
+  --shadow:0 1px 2px rgba(21,25,23,.05), 0 10px 28px -20px rgba(21,25,23,.35);
+  --r:12px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ground:#0F1413; --surface:#171D1B; --surface-2:#212926; --sunken:#131917;
+    --ink:#E6EAE6; --ink-2:#A5AFA9; --ink-3:#76807A;
+    --line:#27302C; --line-2:#38423C;
+    --deep:#132420; --deep-ink:#DCEAE3; --deep-line:#254036; --cream:#EFE2C9;
+    --accent:#6FBF9C; --accent-soft:#182A24; --accent-ink:#9FD9BF;
+    --gold:#CBA76A; --gold-soft:#2A2318;
+    --good:#65BA8A; --warm:#D9925B; --crit:#E1756C;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px -20px rgba(0,0,0,.9);
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+[hidden]{display:none!important}
+body{background:var(--ground);color:var(--ink);
+  font-family:"IBM Plex Sans KR",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+  font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:"Hahmlet","Nanum Myeongjo",serif;font-weight:700;margin:0;text-wrap:balance;letter-spacing:-.015em}
+button{font:inherit;color:inherit}
+a{color:var(--accent-ink)}
+img{max-width:100%}
+.wrap{max-width:920px;margin:0 auto;padding-inline:16px}
+.sm{font-size:12.5px}
+.muted{color:var(--ink-3)}
+.lbl{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:14px}
+
+/* 로그인 */
+#login{position:fixed;inset:0;z-index:80;background:var(--deep);display:flex;align-items:center;justify-content:center;padding:20px}
+#login .box{width:min(380px,100%);background:var(--surface);border-radius:18px;padding:26px 22px;box-shadow:0 30px 70px -30px rgba(0,0,0,.6)}
+#login .brandline{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+#login h1{font-size:24px;margin-top:5px}
+#login p.help{font-size:12.5px;color:var(--ink-2);margin:8px 0 18px}
+#login .f2{display:flex;flex-direction:column;gap:12px}
+#login .err{color:var(--crit);font-size:12.5px;min-height:18px}
+
+/* 상단 */
+header.top{background:var(--surface);border-bottom:1px solid var(--line)}
+.topbar{display:flex;align-items:center;gap:12px;padding-block:12px;justify-content:space-between}
+.mark{display:flex;align-items:center;gap:9px;min-width:0;flex:1}
+.mark .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex:0 0 auto;margin-top:1px}
+/* 이름이 길면 잘라내지 않고 두 줄로 내려가며 조금 작아진다 */
+.mark b{font-family:"Hahmlet",serif;font-weight:700;line-height:1.25;
+  font-size:16px;word-break:keep-all;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mark b.long{font-size:14px}
+.mark b.xlong{font-size:12.5px;line-height:1.3}
+.topacts{display:flex;gap:6px;align-items:center;flex:0 0 auto}
+.whoami{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.whoami b{color:var(--ink);font-weight:600}
+nav.tabs{position:sticky;top:0;z-index:30;background:var(--ground);border-bottom:1px solid var(--line)}
+.tabrow{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabrow::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;background:none;border:0;padding:12px 12px;color:var(--ink-2);cursor:pointer;
+  border-bottom:2px solid transparent;white-space:nowrap;font-size:14px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+main{padding-block:18px 72px}
+section[hidden]{display:none!important}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.sechead h2{font-size:19px}
+.sechead p{margin:0;font-size:13px;color:var(--ink-2)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.pad{padding:16px}
+
+/* 배너 */
+.notice{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 15px;border-radius:var(--r);
+  background:var(--gold-soft);border:1px solid rgba(154,123,63,.4);font-size:13px;color:var(--ink-2);margin-bottom:14px}
+.notice b{color:var(--ink)}
+.notice .btn{margin-left:auto}
+.notice.warn{background:var(--sunken);border-color:var(--line-2)}
+.pickbox{display:flex;flex-wrap:wrap;gap:7px;padding:10px;border:1px solid var(--line);
+  border-radius:10px;background:var(--sunken);max-height:168px;overflow:auto}
+.pick{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
+  border:1px solid var(--line-2);background:var(--surface);font-size:13px;cursor:pointer}
+.pick input{margin:0;width:15px;height:15px;flex:0 0 auto}
+.pick:has(input:checked){background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.modebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:9px 14px;border-radius:10px;
+  background:var(--sunken);border:1px solid var(--line);font-size:12.5px;color:var(--ink-2);margin-bottom:14px}
+.modebar b{color:var(--ink)}
+
+/* 히어로 */
+.hero{background:var(--deep);color:var(--deep-ink);border-radius:16px;padding:22px 20px;position:relative;overflow:hidden}
+.hero .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.6;font-weight:500}
+.hero h1{font-size:29px;line-height:1.2;margin-top:4px;color:var(--deep-ink)}
+.hero .meta{margin-top:7px;font-size:13.5px;opacity:.78}
+.hero .dday{position:absolute;right:20px;top:18px;text-align:right}
+.hero .dday .n{font-family:"Hahmlet",serif;font-weight:700;font-size:38px;line-height:1;color:var(--cream);letter-spacing:-.03em}
+.hero .dday .n .pre{font-size:.52em;font-weight:500;opacity:.6;margin-right:1px;letter-spacing:0}
+.hero .dday .c{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.55;margin-top:6px}
+@media(max-width:470px){
+  .hero .dday{position:static;text-align:left;margin-top:15px;padding-top:14px;
+    border-top:1px solid var(--deep-line);display:flex;align-items:baseline;gap:11px}
+  .hero .dday .c{margin-top:0}
+}
+
+.dash{display:flex;flex-direction:column;gap:14px}
+.headline{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow);
+  padding:18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.headline .v{font-family:"IBM Plex Mono",monospace;font-size:32px;font-weight:600;line-height:1.1;color:var(--accent-ink)}
+.headline .side{margin-left:auto;text-align:right;font-size:13px;color:var(--ink-2);line-height:1.5}
+.headline .side .big{font-family:"IBM Plex Mono",monospace;font-size:17px;font-weight:600}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media(max-width:560px){.trio{grid-template-columns:1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .trio .stat{border:0;border-radius:0;box-shadow:none}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;box-shadow:var(--shadow)}
+.stat .v{font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:600;margin-top:3px;line-height:1.3}
+.stat .sub{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.card > .h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px 11px;border-bottom:1px solid var(--line)}
+.card > .h h3{font-size:15px}
+.more{background:none;border:0;color:var(--ink-3);font-size:12px;cursor:pointer;padding:2px 4px}
+.more:hover{color:var(--accent-ink)}
+
+ul.rows{list-style:none;margin:0;padding:0}
+ul.rows li{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line)}
+ul.rows li:first-child{border-top:0}
+/* 라벨 / 값 줄 — 값이 길어도 라벨 글자가 세로로 쪼개지지 않게 */
+ul.rows li.kv{align-items:flex-start}
+ul.rows li.kv .k{flex:0 0 auto;min-width:5.4em;color:var(--ink-3);font-size:12.5px;
+  white-space:nowrap;padding-top:1px}
+ul.rows li.kv .v{flex:1;min-width:0;text-align:right;overflow-wrap:anywhere;word-break:break-all}
+.nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.pos{color:var(--good);font-weight:600}
+.neg{color:var(--crit)}
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11.5px;
+  border:1px solid var(--line-2);color:var(--ink-2);background:var(--surface-2);white-space:nowrap}
+.chip.ok{color:var(--good);border-color:rgba(47,125,83,.42);background:transparent}
+.chip.wait{color:var(--warm);border-color:rgba(163,94,39,.42);background:transparent}
+.chip.no{color:var(--crit);border-color:rgba(174,56,48,.42);background:transparent}
+.chip.gold{color:var(--gold);border-color:rgba(154,123,63,.45);background:var(--gold-soft)}
+.chip.me{color:var(--accent-ink);border-color:rgba(44,97,80,.4);background:var(--accent-soft)}
+
+.bigfig{padding:20px 18px;border-radius:var(--r);background:var(--accent-soft);border:1px solid var(--line)}
+.bigfig .v{font-family:"IBM Plex Mono",monospace;font-size:34px;font-weight:600;line-height:1.15;color:var(--accent-ink)}
+.bigfig .note{font-size:12px;color:var(--ink-2);margin-top:6px}
+.settle{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.transfer{padding:12px 16px;border-top:1px solid var(--line)}
+.transfer:first-child{border-top:0}
+.transfer.done{background:var(--sunken)}
+.transfer .top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.transfer .acct{margin-top:7px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  font-size:12.5px;color:var(--ink-2);padding-top:7px;border-top:1px dashed var(--line)}
+.arrow{color:var(--ink-3)}
+
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:13.5px}
+th,td{text-align:left;padding:9px 12px;border-top:1px solid var(--line);vertical-align:top}
+thead th{border-top:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600;white-space:nowrap;background:var(--sunken)}
+td.r,th.r{text-align:right;white-space:nowrap}
+tr.off td{opacity:.5;text-decoration:line-through}
+tfoot td{border-top:1.5px solid var(--line-2);font-weight:600;background:var(--sunken)}
+
+/* 지출대장 — 휴대폰에서는 표 대신 카드 */
+.elist{display:none}
+.ecard{padding:13px 15px;border-top:1px solid var(--line)}
+.ecard:first-child{border-top:0}
+.ecard.off{opacity:.55}
+.ecard.off .etop b{text-decoration:line-through}
+.etop{display:flex;align-items:baseline;gap:10px}
+.etop b{flex:1;min-width:0;font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.etop .amt{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;
+  font-weight:600;font-size:16px;white-space:nowrap}
+.emeta{margin-top:5px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.enote{margin-top:4px;font-size:12.5px;color:var(--ink-3);overflow-wrap:anywhere}
+.efoot{margin-top:9px;display:flex;align-items:center;gap:8px}
+.efoot .who{flex:1;min-width:0;font-size:11.5px;color:var(--ink-3)}
+.esum{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  padding:13px 15px;background:var(--sunken);border-top:1.5px solid var(--line-2);font-weight:600}
+.esum .v{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:16px}
+@media(max-width:640px){
+  #expTable,#balTableWrap{display:none}
+  .elist{display:block}
+}
+
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:58px 1fr;gap:13px;padding:13px 16px;border-top:1px solid var(--line)}
+.tl li:first-child{border-top:0}
+.tl .when{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--accent-ink);font-weight:500}
+.tl .what strong{font-weight:600;font-size:15px}
+.tl .what .where{font-size:12.5px;color:var(--ink-2)}
+.tl .what .memo{font-size:12.5px;color:var(--ink-3);margin-top:3px;white-space:pre-wrap}
+.daymark{padding:9px 16px;background:var(--sunken);font-size:12px;letter-spacing:.05em;color:var(--ink-2);font-weight:600;border-top:1px solid var(--line)}
+.daymark:first-child{border-top:0}
+.meal{display:grid;grid-template-columns:66px 1fr;gap:13px;padding:13px 16px;border-top:1px solid var(--line);align-items:start}
+.meal .slot{font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.04em;padding-top:2px}
+.meal .menu{font-weight:600}
+.meal .where{font-size:12.5px;color:var(--ink-2)}
+.meal .note{font-size:12.5px;color:var(--ink-3);margin-top:2px;white-space:pre-wrap}
+
+/* 이동 */
+.team{padding:14px 16px;border-top:1px solid var(--line)}
+.team:first-child{border-top:0}
+.team .th{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.team .th b{font-weight:600;font-size:15px}
+.team .route{margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13.5px}
+.team .route .pt{font-weight:500}
+.team .riders{margin-top:8px;display:flex;gap:5px;flex-wrap:wrap}
+.team .note{font-size:12.5px;color:var(--ink-3);margin-top:6px;white-space:pre-wrap}
+
+/* 숙소 */
+details.det{border-top:1px solid var(--line)}
+details.det > summary{list-style:none;cursor:pointer;padding:11px 16px;font-size:13px;color:var(--ink-2);
+  display:flex;align-items:center;gap:6px;background:var(--sunken)}
+details.det > summary::-webkit-details-marker{display:none}
+details.det > summary::after{content:"▾";margin-left:auto;color:var(--ink-3);font-size:11px}
+details.det[open] > summary::after{content:"▴"}
+
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1px;background:var(--line)}
+.mcard{background:var(--surface);padding:12px 14px;display:flex;gap:10px;align-items:center}
+.mcard .who{flex:1;min-width:0}
+.mcard .who b{font-weight:600}
+.mcard .who div{font-size:12px;color:var(--ink-2);overflow-wrap:anywhere}
+.rsvpbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-top:1px solid var(--line);background:var(--sunken)}
+.rsvpbar select{width:auto;min-width:118px}
+
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.gal figure{margin:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--sunken)}
+.gal img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--sunken)}
+.gal figcaption{padding:7px 10px;font-size:12px;color:var(--ink-2);display:flex;justify-content:space-between;gap:6px;align-items:center}
+.linkcard{display:flex;flex-direction:column;justify-content:center;gap:4px;padding:16px;min-height:88px;text-decoration:none}
+.gal figure button.pic{display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in}
+
+/* 올리기 전 미리보기 */
+.upgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;max-height:46vh;overflow:auto}
+.upgrid .th{position:relative;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--sunken)}
+.upgrid .th img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover}
+.upgrid .th .x{position:absolute;top:3px;right:3px;width:21px;height:21px;border-radius:50%;
+  border:0;background:rgba(10,14,12,.72);color:#fff;font-size:13px;line-height:1;cursor:pointer}
+.upgrid .th .nm2{position:absolute;left:0;right:0;bottom:0;background:rgba(10,14,12,.62);color:#fff;
+  font-size:10px;padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 크게 보기 */
+#lightbox{position:fixed;inset:0;z-index:98;background:rgba(8,12,10,.94);display:none;
+  align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:16px}
+#lightbox.on{display:flex}
+#lightbox img{max-width:100%;max-height:76vh;object-fit:contain;border-radius:10px;background:#000}
+#lightbox .lbar{display:flex;align-items:center;gap:12px;color:#E9F1EC;font-size:13px}
+#lightbox .lbtn{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#E9F1EC;
+  border-radius:9px;padding:8px 15px;cursor:pointer;font-size:14px}
+#lightbox .lbtn:hover{background:rgba(255,255,255,.18)}
+#lightbox .cap2{color:#A5AFA9;font-size:12.5px;text-align:center;max-width:90vw}
+.linkcard b{font-weight:600;font-size:14px;color:var(--ink)}
+
+.sug{padding:13px 16px;border-top:1px solid var(--line)}
+.sug:first-child{border-top:0}
+.sug .head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.sug .head b{font-weight:600}
+.sug .head time{font-size:11.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.sug p{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.sug.done p{color:var(--ink-3)}
+
+/* 설정 */
+.share{display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:16px}
+.share .qr{width:132px;height:132px;background:#fff;padding:8px;border-radius:10px;border:1px solid var(--line);flex:0 0 auto;
+  display:flex;align-items:center;justify-content:center}
+.share .qr img,.share .qr canvas{display:block;width:116px;height:116px}
+.share .info{flex:1;min-width:220px}
+.urlrow{display:flex;gap:8px;margin-top:8px}
+.urlrow input{font-family:"IBM Plex Mono",monospace;font-size:12px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:9px;border:1px solid var(--line-2);
+  background:var(--surface);cursor:pointer;font-size:13.5px;line-height:1.4}
+.btn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.btn.primary{color:#0E1412}}
+.btn.block{width:100%;justify-content:center;padding:10px}
+.btn.tiny{padding:4px 9px;font-size:12px;border-radius:7px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-3)}
+.btn.ghost:hover{color:var(--crit)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+label.f{display:block;font-size:12px;color:var(--ink-2);margin-bottom:4px;font-weight:500}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line-2);border-radius:9px;
+  background:var(--surface);color:var(--ink);font:inherit;font-size:14px}
+textarea{min-height:74px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+input[type="date"],input[type="time"]{font-family:"IBM Plex Mono",monospace}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.fgrid .full{grid-column:1/-1}
+.check{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.check input{width:auto}
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);
+  padding:0;width:min(560px,calc(100vw - 32px));box-shadow:0 24px 64px -24px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(8,12,10,.55)}
+dialog h3{font-size:17px;padding:17px 18px 0}
+dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.dlgfoot{display:flex;justify-content:flex-end;gap:8px}
+.empty{padding:20px 16px;text-align:center;color:var(--ink-3);font-size:13.5px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:99;
+  background:var(--ink);color:var(--ground);padding:9px 16px;border-radius:999px;font-size:13.5px;
+  box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+#busy{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:95;display:none;align-items:center;justify-content:center}
+#busy.on{display:flex}
+#busy div{background:var(--surface);padding:12px 20px;border-radius:999px;font-size:13.5px;box-shadow:var(--shadow)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ===== 휴대폰 ===== */
+@media (max-width:640px){
+  body{font-size:15px}
+  .wrap{padding-inline:13px}
+  .topbar{padding-block:9px;gap:8px;align-items:flex-start}
+  .whoami{max-width:92px;overflow:hidden;text-overflow:ellipsis;padding-top:2px}
+  .mark b{font-size:14.5px}
+  .mark b.long{font-size:13px}
+  .mark b.xlong{font-size:12px}
+
+  /* 탭을 줄바꿈해서 전부 보이게 (오른쪽에 더 있는지 몰라 못 쓰는 일이 없도록) */
+  .tabrow{flex-wrap:wrap;overflow:visible;gap:5px;padding-block:8px}
+  .tab{border:1px solid var(--line-2);border-radius:99px;background:var(--surface);
+    padding:7px 12px;font-size:12.5px;border-bottom:1px solid var(--line-2)}
+  .tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn{padding:9px 14px}
+  .btn.tiny{padding:6px 11px;font-size:12.5px}   /* 손가락으로 눌러야 하니 조금 크게 */
+  .hero{padding:18px 16px}
+  .hero h1{font-size:24px}
+  .headline{padding:15px;gap:12px}
+  .headline .v{font-size:27px}
+  .headline .side{margin-left:0;text-align:left;width:100%;
+    border-top:1px solid var(--line);padding-top:11px}
+  .sechead h2{font-size:18px}
+  .card > .h{padding:12px 14px 10px}
+  ul.rows li{padding:11px 14px}
+
+
+  .settle{grid-template-columns:1fr}
+  .bigfig .v{font-size:30px}
+  .transfer .top{gap:7px}
+  .mgrid{grid-template-columns:1fr}
+  .gal{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .share{flex-direction:column;align-items:stretch;gap:14px}
+  .share .qr{align-self:center}
+  .urlrow{flex-direction:column}
+  .urlrow .btn{width:100%;justify-content:center}
+  .tl li{grid-template-columns:50px 1fr;gap:10px}
+  .meal{grid-template-columns:56px 1fr;gap:10px}
+
+  /* 입력창은 아래에서 올라오는 시트 형태로 */
+  dialog{width:100vw;max-width:100vw;margin:0;position:fixed;left:0;right:0;bottom:0;top:auto;
+    border-radius:18px 18px 0 0;max-height:90vh}
+  dialog form{padding-bottom:26px}
+  .fgrid{grid-template-columns:1fr}
+  #busy div{font-size:13px}
+}
+@media (max-width:640px) and (display-mode:browser){ input,select,textarea{font-size:16px} } /* iOS 확대 방지 */
+@media (max-width:640px) and (prefers-color-scheme:dark){ .tab[aria-selected="true"]{color:#0E1412} }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="box">
+    <div class="brandline">TRIP DASHBOARD</div>
+    <h1 id="loginTitle">여행 상황판</h1>
+    <p class="help">명단에 적힌 본인 이름과 비밀번호를 입력하세요. 처음이라면 기본 비밀번호를 씁니다.</p>
+    <form class="f2" id="loginForm">
+      <div><label class="f" for="loginName">이름</label>
+        <input type="text" id="loginName" lang="ko" inputmode="text" style="ime-mode:active"
+               autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"
+               placeholder="예) 홍길동"></div>
+      <div><label class="f" for="loginPw">비밀번호</label>
+        <input type="password" id="loginPw" autocomplete="current-password" inputmode="numeric"></div>
+      <div class="err" id="loginErr"></div>
+      <button class="btn primary block" type="submit">들어가기</button>
+    </form>
+    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.1.0</span></div>
+  </div>
+</div>
+
+<div id="app" hidden>
+<header class="top">
+  <div class="wrap topbar">
+    <div class="mark"><span class="dot"></span><b id="markTitle">여행 상황판</b></div>
+    <div class="topacts">
+      <span class="whoami"><b id="whoName">—</b><span id="whoRole"></span></span>
+      <button class="btn tiny" id="refreshBtn">새로고침</button>
+      <button class="btn tiny" id="logoutBtn">로그아웃</button>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap tabrow" role="tablist" id="tabrow">
+    <button class="tab" role="tab" data-tab="dash" aria-selected="true">대시보드</button>
+    <button class="tab" role="tab" data-tab="settle" aria-selected="false">정산</button>
+    <button class="tab" role="tab" data-tab="expense" aria-selected="false">지출대장</button>
+    <button class="tab" role="tab" data-tab="plan" aria-selected="false">일정</button>
+    <button class="tab" role="tab" data-tab="meal" aria-selected="false">식사</button>
+    <button class="tab" role="tab" data-tab="move" aria-selected="false">이동</button>
+    <button class="tab" role="tab" data-tab="stay" aria-selected="false">숙소</button>
+    <button class="tab" role="tab" data-tab="people" aria-selected="false">참석자</button>
+    <button class="tab" role="tab" data-tab="photo" aria-selected="false">사진</button>
+    <button class="tab" role="tab" data-tab="idea" aria-selected="false">건의사항</button>
+    <button class="tab" role="tab" data-tab="setting" aria-selected="false">설정</button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div class="notice" id="pwNotice" hidden>
+    <span><b>기본 비밀번호를 쓰고 있습니다.</b> 다른 사람이 내 이름으로 들어올 수 있어요.</span>
+    <button class="btn tiny primary" id="pwNoticeBtn">지금 바꾸기</button>
+  </div>
+  <div class="notice" id="adminNotice" hidden>
+    <span><b>관리자가 지정되어 있지 않습니다.</b> 구글시트 메뉴 → 여행 상황판 → 관리자 지정 에서 이름을 넣어주세요.</span>
+  </div>
+  <div class="modebar"><span id="modeLabel"></span></div>
+
+  <!-- 대시보드 -->
+  <section id="sec-dash">
+    <div class="dash">
+      <div class="notice" id="dashModeNotice" hidden></div>
+      <div class="hero">
+        <div class="eyebrow">TRIP</div>
+        <h1 id="heroTitle">여행 상황판</h1>
+        <div class="meta" id="heroMeta"></div>
+        <div class="dday"><div class="n" id="heroDday">—</div><div class="c" id="heroDdayCap">출발까지</div></div>
+      </div>
+      <div class="headline">
+        <div><div class="lbl" id="perHeadTopLbl">1인당 부담금 (참석자 N분의 1)</div><div class="v" id="perHeadTop">₩0</div>
+          <div class="sm muted" id="perHeadTopSub">총 ₩0 ÷ 0명</div></div>
+        <div class="side" id="myLine"></div>
+      </div>
+      <div class="trio">
+        <div class="stat"><div class="lbl">총 지출</div><div class="v" id="dTotal">₩0</div><div class="sub" id="dTotalSub">지출 0건</div></div>
+        <div class="stat"><div class="lbl">남은 송금</div><div class="v" id="dPay">0 / 0</div><div class="sub" id="dPaySub">확인된 송금</div></div>
+        <div class="stat"><div class="lbl">참석 확인</div><div class="v" id="dRsvp">0 / 0</div><div class="sub" id="dRsvpSub">응답한 인원</div></div>
+      </div>
+      <div class="duo">
+        <div class="card"><div class="h"><h3>다가오는 일정</h3><button class="more" data-go="plan">전체 보기 →</button></div>
+          <div id="dashPlans"></div></div>
+        <div class="card"><div class="h"><h3>숙소</h3><button class="more" data-go="stay">자세히 →</button></div>
+          <div id="dashStay"></div></div>
+      </div>
+      <div class="duo">
+        <div class="card"><div class="h"><h3>식사 안내</h3><button class="more" data-go="meal">전체 보기 →</button></div>
+          <div id="dashMeals"></div></div>
+        <div class="card"><div class="h"><h3>내 이동편</h3><button class="more" data-go="move">전체 보기 →</button></div>
+          <div id="dashMoves"></div></div>
+      </div>
+      <div class="card"><div class="h"><h3>최근 건의사항</h3><button class="more" data-go="idea">전체 보기 →</button></div>
+        <div id="dashIdeas"></div></div>
+    </div>
+  </section>
+
+  <!-- 정산 -->
+  <section id="sec-settle" hidden>
+    <div class="sechead"><h2>정산</h2><p>참석자 N분의 1 · 낸 돈과 보낸 돈을 합쳐 남은 금액만 보여줍니다</p></div>
+
+    <div class="notice" id="modeNotice" hidden></div>
+    <div class="notice warn" id="headNotice" hidden></div>
+
+    <div class="settle">
+      <div class="bigfig"><div class="lbl" style="color:var(--accent-ink)" id="perHeadLbl">한 사람당 부담금</div>
+        <div class="v" id="perHead">₩0</div><div class="note" id="perHeadNote">총 ₩0 ÷ 0명</div></div>
+      <div class="panel pad" id="myBox">
+        <div class="lbl">내 정산</div>
+        <div class="mono" style="font-size:26px;font-weight:600;margin-top:3px" id="myLeft">₩0</div>
+        <div class="sm muted" id="myBreak" style="margin-top:4px">—</div>
+        <div class="actions" style="margin-top:11px">
+          <button class="btn primary" id="payMine">송금 기록하기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="h"><h3>남은 송금</h3><span class="sm muted" id="settleState">—</span></div>
+      <div id="transfers"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="h"><h3>사람별 현황</h3><span class="sm muted">+ 받을 돈 / − 낼 돈</span></div>
+      <div class="scroll" id="balTableWrap"><table id="balTable">
+        <thead><tr><th>이름</th><th class="r">부담금</th><th class="r">결제</th>
+          <th class="r">보냄</th><th class="r">받음</th><th class="r">잔액</th></tr></thead>
+        <tbody id="balBody"></tbody>
+      </table></div>
+      <div class="elist"><div id="balCards"></div></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="h"><h3>주고받은 내역</h3>
+        <button class="btn tiny" id="payAdd">＋ 기록 추가</button></div>
+      <div id="payList"></div>
+    </div>
+  </section>
+
+  <!-- 지출대장 -->
+  <section id="sec-expense" hidden>
+    <div class="sechead"><h2>지출대장</h2><p>등록한 사람만 고칠 수 있습니다</p>
+      <div class="actions"><button class="btn primary" id="addExpense">＋ 지출 추가</button></div></div>
+    <div class="notice" id="expClosedNotice" hidden></div>
+    <div class="panel" style="overflow:hidden">
+      <div class="scroll" id="expTable"><table>
+        <thead><tr><th style="width:34px">#</th><th>결제자</th><th>수단</th><th>사유</th>
+          <th class="r">금액</th><th>비고</th><th>지불현황</th><th>등록자</th><th></th></tr></thead>
+        <tbody id="expBody"></tbody>
+        <tfoot><tr><td colspan="4">정산 대상 합계</td><td class="r mono" id="expTotal">₩0</td><td colspan="4"></td></tr></tfoot>
+      </table></div>
+      <div class="elist">
+        <div id="expCards"></div>
+        <div class="esum"><span>정산 대상 합계</span><span class="v" id="expTotal2">₩0</span></div>
+      </div>
+      <div class="empty" id="expEmpty" hidden>아직 등록된 지출이 없습니다.</div>
+    </div>
+  </section>
+
+  <!-- 일정 -->
+  <section id="sec-plan" hidden>
+    <div class="sechead"><h2>일정</h2>
+      <div class="actions adminonly" hidden><button class="btn primary" id="addPlan">＋ 일정 추가</button></div></div>
+    <div class="panel" style="overflow:hidden"><div id="planList"></div>
+      <div class="empty" id="planEmpty">일정이 아직 없습니다.</div></div>
+  </section>
+
+  <!-- 식사 -->
+  <section id="sec-meal" hidden>
+    <div class="sechead"><h2>식사</h2><p>끼니별 메뉴와 장소</p>
+      <div class="actions adminonly" hidden><button class="btn primary" id="addMeal">＋ 식사 추가</button></div></div>
+    <div class="panel" style="overflow:hidden"><div id="mealList"></div>
+      <div class="empty" id="mealEmpty">식사 계획이 아직 없습니다.</div></div>
+  </section>
+
+  <!-- 이동 -->
+  <section id="sec-move" hidden>
+    <div class="sechead"><h2>이동</h2><p>팀별 차량·탑승자·출발 시각</p>
+      <div class="actions adminonly" hidden><button class="btn primary" id="addMove">＋ 이동편 추가</button></div></div>
+    <div class="panel" style="overflow:hidden"><div id="moveList"></div>
+      <div class="empty" id="moveEmpty">등록된 이동편이 없습니다.</div></div>
+  </section>
+
+  <!-- 숙소 -->
+  <section id="sec-stay" hidden>
+    <div class="sechead"><h2>숙소</h2>
+      <div class="actions adminonly" hidden><button class="btn primary" id="addStay">＋ 숙소 추가</button></div></div>
+    <div id="stayList"></div>
+    <div class="panel empty" id="stayEmpty">등록된 숙소가 없습니다.</div>
+  </section>
+
+  <!-- 참석자 -->
+  <section id="sec-people" hidden>
+    <div class="sechead"><h2>참석자</h2><p id="peopleCount"></p>
+      <div class="actions adminonly" hidden><button class="btn primary" id="addMember">＋ 인원 추가</button></div></div>
+    <div class="panel" style="overflow:hidden">
+      <div class="mgrid" id="memberGrid"></div>
+      <div class="rsvpbar">
+        <span class="sm muted" id="rsvpLabel">내 참석 여부</span>
+        <select id="rsvpWho" class="adminonly" hidden aria-label="이름 선택"></select>
+        <button class="btn tiny" data-rsvp="참석">참석</button>
+        <button class="btn tiny" data-rsvp="미정">미정</button>
+        <button class="btn tiny" data-rsvp="불참">불참</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 사진 -->
+  <section id="sec-photo" hidden>
+    <div class="sechead"><h2>사진</h2>
+      <div class="actions">
+        <button class="btn primary" id="addPhotoFile">＋ 사진 올리기</button>
+        <button class="btn" id="addPhotoLink">＋ 링크 추가</button>
+        <input type="file" id="photoFile" accept="image/*" multiple hidden>
+      </div></div>
+    <div class="panel pad">
+      <div class="gal" id="gallery"></div>
+      <div class="empty" id="galEmpty">구글포토·네이버 앨범 링크를 올리면 여기 모입니다.</div>
+    </div>
+  </section>
+
+  <!-- 건의사항 -->
+  <section id="sec-idea" hidden>
+    <div class="sechead"><h2>건의사항</h2><p>가고 싶은 곳, 먹고 싶은 것 — 누구나 남길 수 있습니다</p></div>
+    <div class="panel pad">
+      <form id="ideaForm" style="display:flex;flex-direction:column;gap:10px">
+        <div><label class="f" for="ideaText">내용</label>
+          <textarea id="ideaText" placeholder="예) 둘째 날 점심은 근처 칼국수집 어떤가요?"></textarea></div>
+        <div class="actions" style="justify-content:flex-end;align-items:center">
+          <span class="sm muted" id="ideaAs"></span>
+          <button class="btn primary" type="submit">남기기</button></div>
+      </form>
+    </div>
+    <div class="panel" style="margin-top:14px;overflow:hidden"><div id="ideaList"></div>
+      <div class="empty" id="ideaEmpty">첫 번째 건의사항을 남겨보세요.</div></div>
+  </section>
+
+  <!-- 설정 -->
+  <section id="sec-setting" hidden>
+    <div class="sechead"><h2>설정</h2></div>
+
+    <div class="card">
+      <div class="h"><h3>링크 공유</h3><span class="sm muted">카톡으로 보내거나 QR을 찍게 하세요</span></div>
+      <div class="share">
+        <div class="qr" id="qrBox"><span class="sm muted">QR</span></div>
+        <div class="info">
+          <div class="sm muted">이 주소를 아는 사람은 누구나 로그인 화면까지 올 수 있고, 명단에 있는 이름과 비밀번호를 알아야 들어옵니다.</div>
+          <div class="urlrow"><input type="text" id="shareUrl" readonly>
+            <button class="btn" id="copyUrl">복사</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="h"><h3>내 계정</h3><span class="sm muted" id="myNameLabel"></span></div>
+      <ul class="rows">
+        <li><span class="nm">비밀번호</span><span class="sm muted" id="pwState"></span>
+          <button class="btn tiny" id="pwBtn">변경</button></li>
+        <li><span class="nm">내 계좌 <div class="sm muted">등록하면 돈 보낼 사람이 바로 확인합니다</div></span>
+          <span class="mono sm" id="myAcct">미등록</span>
+          <button class="btn tiny" id="acctBtn">등록</button></li>
+      </ul>
+    </div>
+
+    <div class="card adminonly" style="margin-top:14px" hidden>
+      <div class="h"><h3>관리자</h3><span class="sm muted">관리자만 보입니다</span></div>
+      <ul class="rows">
+        <li><span class="nm">여행 정보 <div class="sm muted">이름 · 날짜 · 장소 · 최대 인원</div></span>
+          <button class="btn tiny" id="metaBtn">수정</button></li>
+        <li><span class="nm">정산 방식 <div class="sm muted">여행 중에도 송금을 받을지, 끝나고 한 번에 받을지</div></span>
+          <span class="sm" id="modeState">—</span>
+          <button class="btn tiny" id="modeBtn">변경</button></li>
+        <li><span class="nm">정산 인원 <div class="sm muted">참석 미정·무응답인 사람을 N분의 1에 넣을지 (불참은 언제나 제외)</div></span>
+          <span class="sm" id="waitState">—</span>
+          <button class="btn tiny" id="waitBtn">변경</button></li>
+        <li><span class="nm">지출 마감 <div class="sm muted">더 이상 지출이 없을 때 잠가서 금액을 확정합니다</div></span>
+          <span class="sm" id="closeState">—</span>
+          <button class="btn tiny" id="closeBtn">마감</button></li>
+        <li><span class="nm">기본 비밀번호 <div class="sm muted">아직 비밀번호를 안 정한 사람이 처음 들어올 때 쓰는 번호</div></span>
+          <span class="mono sm" id="defPw">—</span>
+          <button class="btn tiny" id="defPwBtn">변경</button></li>
+        <li><span class="nm">접속 기록 <div class="sm muted">누가 언제 들어왔는지</div></span>
+          <button class="btn tiny" id="logBtn">불러오기</button></li>
+        <li><span class="nm">백업 <div class="sm muted">전체 자료를 파일 하나로 내려받습니다 (비밀번호 제외)</div></span>
+          <button class="btn tiny" id="bkSaveBtn">내려받기</button></li>
+        <li><span class="nm">백업에서 되돌리기 <div class="sm muted">내려받아 둔 백업 파일로 전부 복구합니다</div></span>
+          <button class="btn tiny" id="bkLoadBtn">파일 고르기</button></li>
+        <li><span class="nm">다음 여행 준비 <div class="sm muted">명단·계좌는 남기고 지출·일정·숙소만 비웁니다</div></span>
+          <button class="btn tiny" id="resetBtn">비우기</button></li>
+        <li><span class="nm">화면 자동 업데이트 <div class="sm muted">만든 곳에서 최신 화면을 받아옵니다. 꺼두면 지금 화면 그대로 씁니다</div></span>
+          <span class="sm" id="autoUpState">—</span>
+          <button class="btn tiny" id="autoUpBtn">변경</button>
+          <button class="btn tiny" id="autoUpNow">지금 확인</button></li>
+      </ul>
+      <div id="logList"></div>
+      <input type="file" id="bkFile" accept="application/json,.json" hidden>
+    </div>
+
+    <div class="sm muted" style="text-align:center;margin-top:20px">
+      화면 <span class="mono" id="uiVer">2.1.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
+    </div>
+  </section>
+</main>
+</div>
+
+<dialog id="dlg"><h3 id="dlgTitle">입력</h3>
+  <form method="dialog" id="dlgForm">
+    <div id="dlgBody" class="fgrid"></div>
+    <div class="dlgfoot">
+      <button class="btn" value="cancel" type="submit" formnovalidate>취소</button>
+      <button class="btn primary" id="dlgOk" value="ok" type="button">저장</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="upDlg"><h3 id="upTitle">사진 미리보기</h3>
+  <div class="db" style="padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px">
+    <div class="upgrid" id="upList"></div>
+    <div class="sm muted" id="upNote"></div>
+    <div class="dlgfoot">
+      <button class="btn" id="upCancel">취소</button>
+      <button class="btn primary" id="upGo">올리기</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="lightbox">
+  <img id="lbImg" alt="">
+  <div class="cap2" id="lbCap"></div>
+  <div class="lbar">
+    <button class="lbtn" id="lbPrev">‹ 이전</button>
+    <span id="lbNum" class="mono"></span>
+    <button class="lbtn" id="lbNext">다음 ›</button>
+    <button class="lbtn" id="lbOpen">원본 열기 ↗</button>
+    <button class="lbtn" id="lbClose">닫기</button>
+  </div>
+</div>
+
+<div id="busy"><div>저장하는 중…</div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+var BOOT = <?!= boot ?>;
+var S = {meta:{},members:[],expenses:[],plans:[],meals:[],moves:[],stays:[],photos:[],ideas:[],pays:[]};
+var TOKEN="", ME="", ROLE="member", MUSTSET=false;
+var DATE_MIN="2020-01-01", DATE_MAX="2099-12-31";
+var SLOTS=["아침","점심","저녁","간식","기타"];
+var MOVE_KINDS=["출발","복귀","현지이동"];
+
+function $(s){return document.querySelector(s)}
+function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function won(n){n=Math.round(Number(n)||0);return (n<0?"-₩":"₩")+Math.abs(n).toLocaleString("ko-KR")}
+function yes(v){var s=String(v==null?"":v).trim().toUpperCase();return s==="O"||s==="TRUE"||s==="Y"||s==="예"||s==="1"}
+function isAdmin(){return ROLE==="admin"}
+function toast(m){var t=$("#toast");t.textContent=m;t.classList.add("show");
+  clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("show")},2800)}
+var _busyT=null;
+function busy(on,msg){
+  var b=$("#busy");
+  b.firstElementChild.textContent = msg || "잠시만요…";
+  b.classList.toggle("on",!!on);
+  clearTimeout(_busyT);
+  if(on) _busyT=setTimeout(function(){          // 응답이 영영 안 와도 화면이 잠기지 않게
+    b.classList.remove("on");
+    toast("응답이 없습니다. 새로고침을 눌러 다시 시도해 주세요");
+  },20000);
+}
+function store(k,v){try{v===null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(_){}}
+function load(k){try{return localStorage.getItem(k)||""}catch(_){return ""}}
+function copyText(txt){
+  try{
+    var ta=document.createElement("textarea");
+    ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    var ok=document.execCommand("copy"); document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+
+/* ---------- 변환 ---------- */
+function adopt(raw){
+  S.meta = raw.meta||{};
+  S.members=(raw.members||[]).map(function(r){return {
+    row:r._row, name:String(r["이름"]||"").trim(), region:r["거주지"]||"", alt:r["출발지(대안)"]||"",
+    rsvp:String(r["참석여부"]||"").trim(), role:r["권한"]||"member",
+    bank:String(r["은행"]||"").trim(), acct:String(r["계좌번호"]||"").trim(), pwSet:!!r["비번설정"]}});
+  S.expenses=(raw.expenses||[]).map(function(r){return {
+    row:r._row, no:Number(r["NO."])||0, payer:String(r["결제자"]||"").trim(), method:r["카드"]||"",
+    reason:r["사유"]||"", amount:Number(String(r["금액"]).replace(/[^0-9.-]/g,""))||0,
+    note:r["비고"]||"", status:String(r["지불현황"]||"미지불").trim(),
+    excluded:yes(r["정산제외"]), owner:String(r["등록자"]||"").trim(),
+    with:String(r["참여자"]||"").split(",").map(function(x){return x.trim()}).filter(Boolean)}});
+  S.plans=(raw.plans||[]).map(function(r){return {
+    row:r._row, date:String(r["날짜"]||"").slice(0,10), time:String(r["시간"]||"").slice(0,5),
+    title:r["내용"]||"", place:r["장소"]||"", memo:r["메모"]||""}});
+  S.meals=(raw.meals||[]).map(function(r){return {
+    row:r._row, date:String(r["날짜"]||"").slice(0,10), slot:String(r["구분"]||"기타").trim(),
+    menu:r["메뉴"]||"", place:r["장소"]||"", note:r["비고"]||""}});
+  S.moves=(raw.moves||[]).map(function(r){return {
+    row:r._row, date:String(r["날짜"]||"").slice(0,10), kind:String(r["구분"]||"출발").trim(),
+    team:r["팀"]||"", how:r["수단"]||"", car:r["차량/편명"]||"", driver:String(r["운전자"]||"").trim(),
+    riders:String(r["탑승자"]||"").split(/[,\s]+/).filter(function(x){return x}),
+    from:r["출발지"]||"", at:String(r["출발시각"]||"").slice(0,5), to:r["도착지"]||"", note:r["비고"]||""}});
+  S.stays=(raw.stays||[]).map(function(r){return {
+    row:r._row, name:r["숙소명"]||"", addr:r["주소"]||"", checkin:r["체크인"]||"", checkout:r["체크아웃"]||"",
+    agency:r["예약처"]||"", code:r["예약번호"]||"", phone:r["연락처"]||"", option:r["옵션"]||"",
+    map:r["지도링크"]||"", memo:r["메모"]||""}});
+  S.photos=(raw.photos||[]).map(function(r){return {
+    row:r._row, title:r["제목"]||"", url:r["링크"]||"", by:r["올린사람"]||"", at:r["등록일"]||"",
+    fileId:String(r["파일ID"]||"").trim() || driveIdOf(r["링크"]),
+    kind:String(r["종류"]||"").trim() || (driveIdOf(r["링크"]) ? "drive" : "")}});
+  S.ideas=(raw.ideas||[]).map(function(r){return {
+    row:r._row, by:r["작성자"]||"익명", text:r["내용"]||"", at:r["등록일"]||"", done:yes(r["반영"])}});
+  S.pays=(raw.pays||[]).map(function(r){return {
+    row:r._row, from:String(r["보낸사람"]||"").trim(), to:String(r["받는사람"]||"").trim(),
+    amount:Number(r["금액"])||0, at:r["확인일"]||"", by:r["확인자"]||"",
+    memo:r["메모"]||"", kind:String(r["구분"]||"정산").trim()}});
+  renderAll();
+}
+function call(fn,args,okMsg){
+  busy(true);
+  google.script.run
+    .withSuccessHandler(function(d){busy(false);adopt(d);if(okMsg)toast(okMsg)})
+    .withFailureHandler(function(e){busy(false);fail(e)})
+    [fn].apply(null,args);
+}
+function fail(e){
+  var m = e&&e.message?e.message:"처리하지 못했습니다";
+  toast(m);
+  if(m.indexOf("로그인")>=0){ store("tripToken",null); setTimeout(function(){location.reload()},1700); }
+}
+
+/* ---------- 계산 ---------- */
+/* ---------- 정산 인원 ----------
+ * '불참'은 언제나 빠진다. '미정'·무응답은 설정(미정포함)에 따른다.
+ * 인원이 바뀌면 1인당 금액이 바뀌고, 이미 보낸 돈(sent)은 그대로 남으므로
+ * 부족분·환급이 아래 잔액 계산에서 자동으로 다시 잡힌다. */
+function waitCounts(){ return String(S.meta["미정포함"]||"포함").trim() !== "제외"; }
+function joins(m){
+  var r = String(m.rsvp||"").trim();
+  if(r === "불참") return false;
+  if(r === "참석") return true;
+  return waitCounts();                 // 미정 · 무응답
+}
+function isWait(m){
+  var r = String(m.rsvp||"").trim();
+  return r !== "참석" && r !== "불참";
+}
+
+/* 지출 한 건을 나눌 사람들.
+ * '참여자'가 비어 있으면 정산 대상자 전원, 적혀 있으면 그 사람들만.
+ * 명단에 없는 이름은 버리고, 전부 사라지면 전원으로 되돌린다. */
+function sharersOf(e, allNames){
+  if(!e.with || !e.with.length) return allNames;
+  var pick=e.with.filter(function(n){return memberOf(n)});
+  return pick.length ? pick : allNames;
+}
+/* 한 건을 k명에게 1원 단위까지 맞춰 나눈다 (합이 정확히 금액과 같아야 잔액 합계가 0이 된다) */
+function splitAmong(amount, people, who){
+  var k=people.length; if(!k) return;
+  var base=Math.floor(amount/k), rest=amount-base*k;
+  people.forEach(function(nm,i){
+    if(who[nm]) who[nm].share += base + (i<rest?1:0);
+  });
+}
+
+function calc(){
+  var list=S.expenses.filter(function(e){return !e.excluded && e.amount>0});
+  var total=list.reduce(function(s,e){return s+e.amount},0);
+  var all=S.members.filter(function(m){return m.name});
+  var inList=all.filter(joins);
+  var names=inList.map(function(m){return m.name});
+  var n=names.length||1;
+
+  var who={};
+  /* 명단 전원을 표에 올리되, 몫은 실제로 나눠 가진 사람에게만 붙는다 */
+  all.forEach(function(m){
+    who[m.name]={name:m.name, paid:0, sent:0, recv:0, share:0,
+                 out:!joins(m), wait:isWait(m)};
+  });
+  var ensure=function(nm){
+    if(!who[nm]) who[nm]={name:nm, paid:0, sent:0, recv:0, share:0, out:true, wait:false};
+    return who[nm];
+  };
+
+  /* 항목별로 나눈다 — 참여자를 지정하지 않은 항목은 정산 대상자 전원 */
+  var partial=0;
+  list.forEach(function(e){
+    var p=sharersOf(e, names);
+    if(p!==names) partial++;
+    p.forEach(ensure);
+    splitAmong(e.amount, p, who);
+  });
+  var share=Math.round(total/n);   // 대표값 (전원 균등일 때의 1인당 금액)
+
+  list.forEach(function(e){ ensure(e.payer||"(미지정)").paid += e.amount; });
+  S.pays.forEach(function(p){
+    if(p.from) ensure(p.from).sent += p.amount;
+    if(p.to)   ensure(p.to).recv   += p.amount;
+  });
+
+  // 잔액 = 낸 돈 - 내 몫 + 보낸 돈 - 받은 돈
+  var bal=Object.keys(who).map(function(nm){
+    var w=who[nm];
+    w.bal = Math.round(w.paid - w.share + w.sent - w.recv);
+    return w;
+  });
+  bal.sort(function(a,b){return b.bal-a.bal});
+
+  var sentTotal=S.pays.reduce(function(a,p){return a+p.amount},0);
+  var out=all.filter(function(m){return !joins(m)}).length;
+  var wait=all.filter(function(m){return isWait(m)}).length;
+  return {total:total, n:names.length, share:share, bal:bal, count:list.length,
+          sentTotal:sentTotal, nAll:all.length, nOut:out, nWait:wait, partial:partial};
+}
+
+/* 인원이 이렇게 바뀌면 1인당 얼마가 되는지 (미리보기용) */
+function shareIf(n){
+  var list=S.expenses.filter(function(e){return !e.excluded && e.amount>0});
+  var total=list.reduce(function(s,e){return s+e.amount},0);
+  return Math.round(total/(n||1));
+}
+
+/** 나의 현황 한 줄 */
+function myState(){
+  var c=calc();
+  var m=c.bal.filter(function(b){return b.name===ME})[0];
+  return m || {name:ME, paid:0, sent:0, recv:0, share:c.share, bal:0};
+}
+function settleMode(){ return String(S.meta["정산모드"]||"수시정산").trim(); }
+function closedAt(){ return String(S.meta["지출마감"]||"").trim(); }
+function isClosed(){ return !!closedAt(); }
+/* 여행후일괄이라도 지출이 마감됐으면 정산을 시작할 수 있다 */
+function canPayNow(){ return settleMode()==="수시정산" || isClosed() || isAdmin(); }
+
+function memberOf(n){return S.members.filter(function(m){return m.name===n})[0]}
+
+/* ---------- 날짜 ---------- */
+function dayLabel(d){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return d||"날짜 미정";
+  var dt=new Date(d+"T00:00:00");
+  return (dt.getMonth()+1)+"월 "+dt.getDate()+"일 ("+["일","월","화","수","목","금","토"][dt.getDay()]+")";
+}
+function shortDay(d){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return "—";
+  var dt=new Date(d+"T00:00:00");
+  return (dt.getMonth()+1)+"/"+dt.getDate()+" "+["일","월","화","수","목","금","토"][dt.getDay()];
+}
+function todayStr(){var d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function sortedPlans(){return S.plans.slice().sort(function(a,b){
+  return (a.date||"9999").localeCompare(b.date||"9999")||(a.time||"99").localeCompare(b.time||"99")})}
+function sortedMeals(){return S.meals.slice().sort(function(a,b){
+  return (a.date||"9999").localeCompare(b.date||"9999")||
+    (SLOTS.indexOf(a.slot)<0?9:SLOTS.indexOf(a.slot))-(SLOTS.indexOf(b.slot)<0?9:SLOTS.indexOf(b.slot))})}
+function sortedMoves(){return S.moves.slice().sort(function(a,b){
+  return (a.date||"9999").localeCompare(b.date||"9999")||(a.at||"99").localeCompare(b.at||"99")})}
+
+/* ---------- 대시보드 ---------- */
+function renderDash(){
+  var m=S.meta||{}, c=calc();
+  var start=String(m["출발일"]||"").slice(0,10), end=String(m["종료일"]||"").slice(0,10);
+  var title=m["여행이름"]||"여행 상황판";
+  $("#heroTitle").textContent=title;
+  var mk=$("#markTitle");
+  mk.textContent=title;
+  mk.className = title.length>16 ? "xlong" : (title.length>10 ? "long" : "");
+  document.title=title;
+  var bits=[];
+  if(start) bits.push(start.replace(/-/g,".")+(end?" – "+end.replace(/-/g,"."):""));
+  if(m["장소"]) bits.push(m["장소"]);
+  $("#heroMeta").textContent=bits.length?bits.join("  ·  "):"날짜·장소는 설정 탭에서 넣을 수 있습니다";
+  var dd="—", cap="출발까지";
+  if(/^\d{4}-\d{2}-\d{2}$/.test(start)){
+    var diff=Math.round((new Date(start+"T00:00:00")-new Date(todayStr()+"T00:00:00"))/86400000);
+    if(diff>0){dd='<span class="pre">D-</span>'+diff}
+    else if(diff===0){dd="오늘";cap="출발일"}
+    else {dd='<span class="pre">D+</span>'+Math.abs(diff);cap="여행 후"}
+  }
+  $("#heroDday").innerHTML=dd; $("#heroDdayCap").textContent=cap;
+
+  var mine=myState(), side="";
+  if(c.partial){
+    $("#perHeadTopLbl").textContent="내 부담금";
+    $("#perHeadTop").textContent=won(mine.share);
+    $("#perHeadTopSub").textContent="총 "+won(c.total)+" · "+c.partial+"건은 고른 사람끼리만 나눔";
+  }else{
+    $("#perHeadTopLbl").textContent="1인당 부담금 (참석자 N분의 1)";
+    $("#perHeadTop").textContent=won(c.share);
+    $("#perHeadTopSub").textContent="총 "+won(c.total)+" ÷ "+c.n+"명"+
+      (c.nOut?" (불참 "+c.nOut+"명 제외)":"")+(c.nWait&&c.total?" · 미정 "+c.nWait+"명, 잠정":"");
+  }
+  if(c.total>0){
+    if(mine.bal>0.5) side='<div>내가 <b class="pos">돌려받을 돈</b></div><div class="big pos">+'+won(mine.bal)+'</div>';
+    else if(mine.bal<-0.5) side='<div>내가 <b class="neg">더 보낼 돈</b></div><div class="big neg">'+won(-mine.bal)+'</div>';
+    else side='<div>내 정산</div><div class="big">끝났습니다</div>';
+    side+='<div class="sm muted">'+(mine.paid?"결제 "+won(mine.paid):"")+
+      (mine.sent?(mine.paid?" · ":"")+"보냄 "+won(mine.sent):"")+'</div>';
+  }
+  $("#myLine").innerHTML=side;
+
+  $("#dTotal").textContent=won(c.total);
+  $("#dTotalSub").textContent="지출 "+c.count+"건";
+  var t=transfers(c.bal);
+  $("#dPay").textContent = c.total ? (t.length ? t.length+"건" : "완료") : "—";
+  $("#dPaySub").textContent = c.total
+    ? (t.length ? "남은 송금 · 지금까지 "+won(c.sentTotal) : "주고받을 돈 없음")
+    : "지출 입력 전";
+  var ans=S.members.filter(function(x){return x.rsvp}).length;
+  var go=S.members.filter(function(x){return x.rsvp==="참석"}).length;
+  $("#dRsvp").textContent=ans+" / "+S.members.length;
+  $("#dRsvpSub").textContent = c.nWait
+    ? ("정산 인원 "+c.n+"명 · 미정 "+c.nWait+"명")
+    : (ans?("참석 "+go+"명 확정 · 정산 인원 "+c.n+"명"):"아직 응답 없음");
+
+  var ymd=todayStr();
+  var ps=sortedPlans(), up=ps.filter(function(p){return !p.date||p.date>=ymd}); if(!up.length) up=ps;
+  $("#dashPlans").innerHTML = up.length ? '<ul class="rows">'+up.slice(0,3).map(function(p){
+    return '<li><span class="mono sm" style="color:var(--accent-ink);min-width:62px">'+esc(shortDay(p.date))+'</span>'+
+      '<span class="nm"><b style="font-weight:600">'+esc(p.title)+'</b>'+
+      (p.place?'<div class="sm muted">'+esc(p.place)+'</div>':'')+'</span>'+
+      (p.time?'<span class="mono sm muted">'+esc(p.time)+'</span>':'')+'</li>'}).join("")+'</ul>'
+    : '<div class="empty">아직 등록된 일정이 없습니다.</div>';
+
+  var ms=sortedMeals(), um=ms.filter(function(x){return !x.date||x.date>=ymd}); if(!um.length) um=ms;
+  $("#dashMeals").innerHTML = um.length ? '<ul class="rows">'+um.slice(0,3).map(function(x){
+    return '<li><span class="mono sm" style="color:var(--accent-ink);min-width:62px">'+esc(shortDay(x.date))+'</span>'+
+      '<span class="nm"><b style="font-weight:600">'+esc(x.menu)+'</b>'+
+      (x.place?'<div class="sm muted">'+esc(x.place)+'</div>':'')+'</span>'+
+      '<span class="chip gold">'+esc(x.slot)+'</span></li>'}).join("")+'</ul>'
+    : '<div class="empty">식사 계획이 아직 없습니다.</div>';
+
+  var myMoves=sortedMoves().filter(function(x){
+    return x.driver===ME || x.riders.indexOf(ME)>=0});
+  var showMoves = myMoves.length?myMoves:sortedMoves();
+  $("#dashMoves").innerHTML = showMoves.length ? '<ul class="rows">'+showMoves.slice(0,3).map(function(x){
+    return '<li><span class="mono sm" style="color:var(--accent-ink);min-width:62px">'+esc(shortDay(x.date))+'</span>'+
+      '<span class="nm"><b style="font-weight:600">'+esc(x.team||x.how||"이동")+'</b>'+
+      '<div class="sm muted">'+esc([x.from,x.to].filter(Boolean).join(" → "))+'</div></span>'+
+      (x.at?'<span class="mono sm muted">'+esc(x.at)+'</span>':'')+'</li>'}).join("")+'</ul>'+
+      (myMoves.length?'':'<div class="sm muted" style="padding:0 16px 12px">아직 내 이름이 들어간 이동편이 없습니다.</div>')
+    : '<div class="empty">등록된 이동편이 없습니다.</div>';
+
+  var s=S.stays[0];
+  $("#dashStay").innerHTML = s ? (
+    '<ul class="rows"><li><span class="nm"><b style="font-weight:600">'+esc(s.name||"숙소")+'</b>'+
+    (s.addr?'<div class="sm muted">'+esc(s.addr)+'</div>':'')+'</span></li>'+
+    (s.checkin?'<li class="kv"><span class="k">체크인</span><span class="v mono">'+esc(s.checkin)+'</span></li>':'')+
+    (s.checkout?'<li class="kv"><span class="k">체크아웃</span><span class="v mono">'+esc(s.checkout)+'</span></li>':'')+
+    '</ul>') : '<div class="empty">숙소 정보가 아직 없습니다.</div>';
+
+  // 정산 방식 · 지출 마감 안내
+  var dn=$("#dashModeNotice");
+  if(isClosed()){
+    dn.innerHTML='<span><b>지출이 마감되었습니다.</b> 금액이 확정됐으니 정산 탭에서 송금해 주세요.'+
+      ' <span class="muted">('+esc(closedAt().slice(5,16))+' 마감)</span></span>'+
+      '<button class="btn tiny" data-go="settle">정산 보기</button>';
+    dn.hidden=false;
+  }else if(settleMode()==="여행후일괄"){
+    dn.innerHTML='<span><b>여행이 끝난 뒤 한 번에 정산합니다.</b> 송금은 여행 끝나고 나서 해주세요!</span>';
+    dn.hidden=false;
+  }else dn.hidden=true;
+
+  var ids=S.ideas.slice().reverse().slice(0,2);
+  $("#dashIdeas").innerHTML = ids.length ? ids.map(function(x){
+    return '<div class="sug"><div class="head"><b>'+esc(x.by)+'</b><time>'+esc(String(x.at).slice(5,16))+'</time>'+
+      (x.done?'<span class="chip ok">반영</span>':'')+'</div><p>'+esc(x.text)+'</p></div>'}).join("")
+    : '<div class="empty">아직 올라온 건의사항이 없습니다.</div>';
+}
+
+/* ---------- 정산 ---------- */
+function transfers(bal){
+  var cred=bal.filter(function(b){return b.bal>0}).map(function(b){return{name:b.name,v:b.bal}});
+  var debt=bal.filter(function(b){return b.bal<0}).map(function(b){return{name:b.name,v:-b.bal}});
+  var out=[],i=0,j=0,g=0;
+  while(i<debt.length&&j<cred.length&&g++<900){
+    var v=Math.min(debt[i].v,cred[j].v);
+    if(v>=1) out.push({from:debt[i].name,to:cred[j].name,amount:Math.round(v)});
+    debt[i].v-=v; cred[j].v-=v;
+    if(debt[i].v<1) i++;
+    if(cred[j].v<1) j++;
+  }
+  return out;
+}
+
+function renderSettle(){
+  var c=calc(), t=transfers(c.bal), me=myState();
+
+  if(c.partial){
+    /* 항목마다 나눈 사람이 달라 '1인당'이 하나로 안 나온다 — 내 부담금을 보여준다 */
+    $("#perHeadLbl").textContent="내 부담금";
+    $("#perHead").textContent=won(me.share);
+    $("#perHeadNote").textContent="총 "+won(c.total)+" · "+c.partial+"건은 고른 사람끼리만 나눔";
+  }else{
+    $("#perHeadLbl").textContent="한 사람당 부담금";
+    $("#perHead").textContent=won(c.share);
+    $("#perHeadNote").textContent="총 "+won(c.total)+" ÷ "+c.n+"명"+
+      (c.nOut?" (불참 "+c.nOut+"명 제외)":"");
+  }
+
+  // 인원이 아직 확정되지 않았으면 금액도 잠정이라는 것을 알린다
+  var hb=$("#headNotice");
+  if(c.nWait>0 && c.total>0){
+    var ifOut=shareIf(c.n-c.nWait), ifIn=shareIf(c.n+(waitCounts()?0:c.nWait));
+    hb.innerHTML='<span><b>아직 잠정 금액입니다</b> — 참석 미정 '+c.nWait+'명이 '+
+      (waitCounts()?'인원에 포함되어':'인원에서 빠져')+' 있습니다. '+
+      (waitCounts()
+        ? '이분들이 모두 불참하면 1인당 '+won(ifOut)+'으로 오릅니다.'
+        : '이분들이 모두 참석하면 1인당 '+won(ifIn)+'으로 내려갑니다.')+
+      ' 인원이 바뀌면 이미 보낸 돈은 그대로 두고 <b>모자란 만큼만 더 보내거나, 남는 만큼 돌려받게</b> 자동으로 다시 계산됩니다.</span>';
+    hb.hidden=false;
+  }else hb.hidden=true;
+
+  // 정산 모드 안내
+  var mode=settleMode(), nb=$("#modeNotice");
+  if(isClosed()){
+    nb.innerHTML='<span><b>지출 마감 · 금액 확정</b> — '+esc(closedAt().slice(0,16))+
+      ' 기준입니다. 아래 금액대로 송금해 주세요.</span>';
+    nb.hidden=false;
+  }else if(mode==="여행후일괄"){
+    nb.innerHTML='<span><b>여행이 끝난 뒤 한 번에 정산합니다. 송금은 여행 끝나고 나서 해주세요!</b>'+
+      ' 지금은 금액만 확인하시면 됩니다'+(isAdmin()?' (관리자는 기록할 수 있습니다)':'')+'.</span>';
+    nb.hidden=false;
+  }else nb.hidden=true;
+
+  // 내 정산
+  var left=$("#myLeft"), brk=$("#myBreak");
+  left.classList.remove("pos","neg");
+  if(c.total===0){ left.textContent="₩0"; brk.textContent="아직 등록된 지출이 없습니다"; }
+  else if(me.bal < -0.5){
+    left.textContent=won(-me.bal); left.classList.add("neg");
+    brk.textContent="더 보내야 할 돈 · 내 몫 "+won(me.share)+
+      (me.sent?" · 이미 보냄 "+won(me.sent):"")+(me.paid?" · 내가 결제 "+won(me.paid):"");
+  }
+  else if(me.bal > 0.5){
+    left.textContent="+"+won(me.bal); left.classList.add("pos");
+    brk.textContent="돌려받을 돈 · 내 몫 "+won(me.share)+
+      (me.paid?" · 내가 결제 "+won(me.paid):"")+(me.sent?" · 보냄 "+won(me.sent):"");
+  }
+  else { left.textContent="정산 끝"; brk.textContent="내 몫 "+won(me.share)+" · 남은 금액 없음"; }
+  $("#payMine").hidden = !(canPayNow() && me.bal < -0.5);
+
+  // 남은 송금
+  $("#settleState").textContent = c.total===0 ? "—"
+    : (t.length===0 ? "모두 정산됨" : t.length+"건 남음");
+  $("#transfers").innerHTML = t.length ? t.map(function(x){
+    var rec=memberOf(x.to), mine=(x.from===ME);
+    var acct = (mine && rec && rec.acct)
+      ? '<div class="acct"><span class="mono">'+esc(rec.bank||"")+" "+esc(rec.acct)+'</span>'+
+        '<button class="btn tiny" data-copy-acct="'+esc((rec.bank?rec.bank+" ":"")+rec.acct)+'">계좌 복사</button>'+
+        '<a class="btn tiny" href="supertoss://send?bank='+encodeURIComponent(rec.bank||"")+
+          '&accountNo='+encodeURIComponent(rec.acct)+'&amount='+x.amount+'&origin=linkshare">토스로 송금</a></div>'
+      : (mine ? '<div class="acct"><span class="muted">'+esc(x.to)+'님이 계좌를 등록하지 않았습니다</span></div>' : '');
+    var btn = (canPayNow() && (isAdmin() || mine))
+      ? '<button class="btn tiny primary" data-pay-from="'+esc(x.from)+'" data-pay-to="'+esc(x.to)+
+        '" data-pay-amt="'+x.amount+'">보냄 기록</button>' : '';
+    return '<div class="transfer"><div class="top"><span class="nm"><b>'+esc(x.from)+'</b>'+
+      (mine?' <span class="chip me">나</span>':'')+' <span class="arrow">→</span> '+esc(x.to)+
+      (x.to===ME?' <span class="chip me">나</span>':'')+'</span>'+
+      '<span class="mono">'+won(x.amount)+'</span>'+btn+'</div>'+acct+'</div>'}).join("")
+    : '<div class="empty">'+(c.total? "주고받을 돈이 남아 있지 않습니다." : "지출을 입력하면 계산됩니다.")+'</div>';
+
+  // 사람별 현황 (표 + 카드)
+  $("#balBody").innerHTML = c.bal.map(function(b){
+    var cls=b.bal>0.5?"pos":(b.bal<-0.5?"neg":"muted");
+    return '<tr><td>'+esc(b.name)+(b.name===ME?' <span class="chip me">나</span>':'')+
+      (b.wait ? ' <span class="chip wait">미정'+(b.out?'·제외':'')+'</span>'
+              : (b.out?' <span class="chip no">불참</span>':''))+'</td>'+
+      '<td class="r mono">'+won(b.share)+'</td><td class="r mono">'+won(b.paid)+'</td>'+
+      '<td class="r mono">'+won(b.sent)+'</td><td class="r mono">'+won(b.recv)+'</td>'+
+      '<td class="r mono '+cls+'">'+(b.bal>0.5?"+":"")+won(b.bal)+'</td></tr>'}).join("");
+  $("#balCards").innerHTML = c.bal.map(function(b){
+    var cls=b.bal>0.5?"pos":(b.bal<-0.5?"neg":"muted");
+    var state=b.bal>0.5?"받을 돈":(b.bal<-0.5?"낼 돈":"정산 끝");
+    return '<div class="ecard"><div class="etop"><b>'+esc(b.name)+
+      (b.name===ME?' <span class="chip me">나</span>':'')+
+      (b.wait ? ' <span class="chip wait">미정'+(b.out?'·제외':'')+'</span>'
+              : (b.out?' <span class="chip no">불참</span>':''))+'</b>'+
+      '<span class="amt '+cls+'">'+(b.bal>0.5?"+":"")+won(b.bal)+'</span></div>'+
+      '<div class="emeta"><span class="muted">'+state+'</span>'+
+      '<span class="muted">· 부담 '+won(b.share)+'</span>'+
+      (b.paid?'<span class="muted">· 결제 '+won(b.paid)+'</span>':'')+
+      (b.sent?'<span class="muted">· 보냄 '+won(b.sent)+'</span>':'')+
+      (b.recv?'<span class="muted">· 받음 '+won(b.recv)+'</span>':'')+
+      '</div></div>'}).join("");
+
+  // 주고받은 내역
+  var kindChip={"선납":"gold","환급":"wait","기타":""};
+  var rows=S.pays.slice().reverse();
+  $("#payList").innerHTML = rows.length ? rows.map(function(p){
+    var canDel = isAdmin() || p.by===ME || p.from===ME;
+    return '<div class="transfer"><div class="top"><span class="nm"><b>'+esc(p.from)+'</b>'+
+      ' <span class="arrow">→</span> '+esc(p.to)+
+      ' <span class="chip '+(kindChip[p.kind]||"ok")+'">'+esc(p.kind||"정산")+'</span>'+
+      (p.memo?'<div class="sm muted">'+esc(p.memo)+'</div>':'')+
+      '<div class="sm muted">'+esc(String(p.at).slice(0,16))+'</div></span>'+
+      '<span class="mono">'+won(p.amount)+'</span>'+
+      (canDel?'<button class="btn tiny ghost" data-pay-del="'+p.row+'">취소</button>':'')+
+      '</div></div>'}).join("")
+    : '<div class="empty">아직 오간 돈이 없습니다.</div>';
+}
+
+/** 송금 기록 입력창 */
+function openPayForm(from, to, amount){
+  var names=memberNames();
+  var me=myState();
+  openForm("송금 기록",[
+    isAdmin()
+      ? {key:"from",label:"보낸 사람",type:"select",options:names,value:from||ME}
+      : {key:"from",label:"보낸 사람",type:"select",options:[ME],value:ME,disabled:true},
+    {key:"to",label:"받은 사람",type:"select",options:[""].concat(names.filter(function(n){return n!==(from||ME)})),value:to||""},
+    {key:"amount",label:"금액 (원)",type:"number",value:amount||(me.bal<0?Math.round(-me.bal):"")},
+    {key:"kind",label:"구분",type:"select",options:["정산","선납","환급","기타"],
+     value:(amount||me.bal<0)?"정산":"선납",
+     hint:"미리 내는 돈은 '선납', 돌려주는 돈은 '환급'으로 남겨두면 나중에 알아보기 좋습니다"},
+    {key:"memo",label:"메모",wide:true,value:"",placeholder:"카카오뱅크로 보냄"}
+  ],function(v){
+    var f=isAdmin()?v.from:ME;
+    if(!v.to){ toast("받는 사람을 골라주세요"); return; }
+    if(!(Number(v.amount)>0)){ toast("금액을 넣어주세요"); return; }
+    call("addPayment",[TOKEN,f,v.to,Number(v.amount),v.memo,v.kind],"기록했습니다");
+  });
+}
+
+function canEditExpense(e){ return !isClosed() && (isAdmin() || (e.owner && e.owner===ME)) }
+function renderExpenses(){
+  var rows=S.expenses.slice().sort(function(a,b){return a.no-b.no});
+  $("#expEmpty").hidden=rows.length>0;
+  $("#addExpense").hidden = isClosed();
+  var cn=$("#expClosedNotice");
+  if(isClosed()){
+    cn.innerHTML='<span><b>지출이 마감되었습니다.</b> ('+esc(closedAt().slice(0,16))+')'+
+      ' 더 이상 추가하거나 고칠 수 없습니다.'+
+      (isAdmin()?' 고쳐야 한다면 설정 탭에서 마감을 풀어주세요.':'')+'</span>';
+    cn.hidden=false;
+  }else cn.hidden=true;
+  var chipOf=function(st){ return st.indexOf("완료")===0?"ok":(st==="취소"?"no":"wait") };
+  /* 참여자를 따로 고른 항목만 표시 (비어 있으면 전원이라 굳이 안 적는다) */
+  var withOf=function(e){
+    if(!e.with || !e.with.length) return "";
+    return e.with.length + "명끼리 (" + e.with.slice(0,4).join(", ") +
+           (e.with.length>4 ? " 외 " + (e.with.length-4) + "명" : "") + ")";
+  };
+
+  // 넓은 화면 — 표
+  $("#expBody").innerHTML=rows.map(function(e,i){
+    var st=e.status||"미지불";
+    return '<tr class="'+(e.excluded?"off":"")+'"><td class="mono muted">'+(e.no||i+1)+'</td>'+
+      '<td>'+esc(e.payer)+(e.payer===ME?' <span class="chip me">나</span>':'')+'</td>'+
+      '<td>'+esc(e.method)+'</td><td>'+esc(e.reason)+'</td>'+
+      '<td class="r mono">'+won(e.amount)+'</td><td class="sm">'+esc(e.note)+'</td>'+
+      '<td><span class="chip '+chipOf(st)+'">'+esc(st)+'</span></td>'+
+      '<td class="sm muted">'+esc(e.owner||"—")+
+        (withOf(e)?'<div class="sm" style="color:var(--accent-ink)">'+esc(withOf(e))+'</div>':'')+'</td>'+
+      '<td class="r">'+(canEditExpense(e)?'<button class="btn tiny" data-edit-exp="'+e.row+'">수정</button>':'')+'</td></tr>'
+  }).join("");
+
+  // 휴대폰 — 카드
+  $("#expCards").innerHTML=rows.map(function(e,i){
+    var st=e.status||"미지불";
+    return '<div class="ecard'+(e.excluded?" off":"")+'">'+
+      '<div class="etop"><b>'+esc(e.reason||"지출")+'</b><span class="amt">'+won(e.amount)+'</span></div>'+
+      '<div class="emeta"><span>'+esc(e.payer||"—")+'</span>'+
+        (e.payer===ME?'<span class="chip me">나</span>':'')+
+        (e.method?'<span class="muted">· '+esc(e.method)+'</span>':'')+
+        '<span class="chip '+chipOf(st)+'">'+esc(st)+'</span></div>'+
+      (e.note?'<div class="enote">'+esc(e.note)+'</div>':'')+
+      (withOf(e)?'<div class="enote" style="color:var(--accent-ink)">'+esc(withOf(e))+'</div>':'')+
+      '<div class="efoot"><span class="who">'+(e.no?("NO."+e.no+" · "):"")+
+        '등록 '+esc(e.owner||"—")+(e.excluded?" · 정산 제외":"")+'</span>'+
+        (canEditExpense(e)?'<button class="btn tiny" data-edit-exp="'+e.row+'">수정</button>':'')+
+      '</div></div>'
+  }).join("");
+
+  var total=won(calc().total);
+  $("#expTotal").textContent=total;
+  $("#expTotal2").textContent=total;
+}
+
+function renderPlans(){
+  var rows=sortedPlans();
+  $("#planEmpty").hidden=rows.length>0;
+  var html="",last=null;
+  rows.forEach(function(p){
+    var d=p.date||"";
+    if(d!==last){ if(last!==null) html+='</ul>'; html+='<div class="daymark">'+esc(dayLabel(d))+'</div><ul class="tl">'; last=d; }
+    html+='<li><span class="when">'+esc(p.time||"—")+'</span><span class="what"><strong>'+esc(p.title)+'</strong>'+
+      (p.place?' <span class="where">· '+esc(p.place)+'</span>':'')+
+      (p.memo?'<div class="memo">'+esc(p.memo)+'</div>':'')+
+      (isAdmin()?'<div style="margin-top:6px"><button class="btn tiny" data-edit-plan="'+p.row+'">수정</button></div>':'')+
+      '</span></li>';
+  });
+  if(last!==null) html+='</ul>';
+  $("#planList").innerHTML=html;
+}
+
+function renderMeals(){
+  var rows=sortedMeals();
+  $("#mealEmpty").hidden=rows.length>0;
+  var html="",last=null;
+  rows.forEach(function(x){
+    var d=x.date||"";
+    if(d!==last){ html+='<div class="daymark">'+esc(dayLabel(d))+'</div>'; last=d; }
+    html+='<div class="meal"><span class="slot">'+esc(x.slot||"기타")+'</span><span>'+
+      '<div class="menu">'+esc(x.menu)+'</div>'+
+      (x.place?'<div class="where">'+esc(x.place)+'</div>':'')+
+      (x.note?'<div class="note">'+esc(x.note)+'</div>':'')+
+      (isAdmin()?'<div style="margin-top:6px"><button class="btn tiny" data-edit-meal="'+x.row+'">수정</button></div>':'')+
+      '</span></div>';
+  });
+  $("#mealList").innerHTML=html;
+}
+
+function renderMoves(){
+  var rows=sortedMoves();
+  $("#moveEmpty").hidden=rows.length>0;
+  var html="",last=null;
+  rows.forEach(function(x){
+    var d=x.date||"";
+    if(d!==last){ html+='<div class="daymark">'+esc(dayLabel(d))+'</div>'; last=d; }
+    var mineTeam = x.driver===ME || x.riders.indexOf(ME)>=0;
+    html+='<div class="team"><div class="th"><b>'+esc(x.team||"이동")+'</b>'+
+      '<span class="chip">'+esc(x.kind||"출발")+'</span>'+
+      (x.how?'<span class="chip gold">'+esc(x.how)+'</span>':'')+
+      (mineTeam?'<span class="chip me">내 이동편</span>':'')+
+      (isAdmin()?'<button class="btn tiny" style="margin-left:auto" data-edit-move="'+x.row+'">수정</button>':'')+'</div>'+
+      '<div class="route">'+(x.at?'<span class="mono">'+esc(x.at)+'</span>':'')+
+        '<span class="pt">'+esc(x.from||"—")+'</span><span class="arrow">→</span>'+
+        '<span class="pt">'+esc(x.to||"—")+'</span>'+
+        (x.car?'<span class="sm muted">'+esc(x.car)+'</span>':'')+'</div>'+
+      (x.driver?'<div class="sm muted" style="margin-top:5px">운전 · '+esc(x.driver)+'</div>':'')+
+      (x.riders.length?'<div class="riders">'+x.riders.map(function(r){
+        return '<span class="chip'+(r===ME?" me":"")+'">'+esc(r)+'</span>'}).join("")+'</div>':'')+
+      (x.note?'<div class="note">'+esc(x.note)+'</div>':'')+'</div>';
+  });
+  $("#moveList").innerHTML=html;
+}
+
+function renderStays(){
+  $("#stayEmpty").hidden=S.stays.length>0;
+  $("#stayList").innerHTML=S.stays.map(function(s){
+    var f=function(k,v,mono){
+      if(!v) return "";
+      var val = /^https?:\/\//i.test(String(v).trim())
+        ? '<a href="'+esc(v)+'" target="_blank" rel="noopener">열기 ↗</a>'
+        : esc(v);
+      return '<li class="kv"><span class="k">'+k+'</span><span class="v '+(mono?"mono":"")+'">'+val+'</span></li>';
+    };
+    var detail=f("예약처",s.agency)+f("예약번호",s.code,1)+f("연락처",s.phone,1)+f("옵션",s.option)+f("메모",s.memo)+
+      (s.map?'<li class="kv"><span class="k">지도</span><span class="v"><a href="'+esc(s.map)+'" target="_blank" rel="noopener">열기 ↗</a></span></li>':'');
+    return '<div class="card" style="margin-bottom:14px">'+
+      '<div class="h"><div><h3>'+esc(s.name||"숙소")+'</h3>'+
+        (s.addr?'<div class="sm muted" style="margin-top:2px">'+esc(s.addr)+'</div>':'')+'</div>'+
+        (isAdmin()?'<button class="btn tiny" data-edit-stay="'+s.row+'">수정</button>':'')+'</div>'+
+      '<ul class="rows">'+f("체크인",s.checkin,1)+f("체크아웃",s.checkout,1)+'</ul>'+
+      (detail?'<details class="det"><summary>세부 정보 보기</summary><ul class="rows">'+detail+'</ul></details>':'')+
+      '</div>'}).join("");
+}
+
+function renderMembers(){
+  var cls={"참석":"ok","미정":"wait","불참":"no"};
+  $("#peopleCount").textContent=S.members.length+"명 등록 (최대 "+(S.meta["최대인원"]||40)+"명)";
+  $("#memberGrid").innerHTML=S.members.map(function(m){
+    return '<div class="mcard"><div class="who"><b>'+esc(m.name)+'</b>'+
+      (m.name===ME?' <span class="chip me">나</span>':'')+
+      (m.role==="admin"?' <span class="chip">관리자</span>':'')+
+      '<div>'+esc(m.region||"")+(m.alt?" · 출발 "+esc(m.alt):"")+
+      (m.acct?" · 계좌 등록됨":"")+
+      (isAdmin()&&!m.pwSet?' · <span style="color:var(--warm)">기본 비밀번호</span>':'')+'</div></div>'+
+      (m.rsvp&&cls[m.rsvp]?'<span class="chip '+cls[m.rsvp]+'">'+esc(m.rsvp)+'</span>':'')+
+      (isAdmin()?'<button class="btn tiny" data-edit-mem="'+m.row+'">수정</button>':'')+'</div>'}).join("");
+  var sel=$("#rsvpWho");
+  sel.innerHTML=S.members.map(function(m){
+    return '<option value="'+esc(m.name)+'"'+(m.name===ME?" selected":"")+'>'+esc(m.name)+'</option>'}).join("");
+  $("#rsvpLabel").textContent=isAdmin()?"참석 여부 기록":"내 참석 여부";
+}
+
+function hostOf(u){try{return new URL(u).hostname.replace(/^www\./,"")}catch(e){return "링크"}}
+
+/* 그림으로 바로 보여줄 수 있는 사진인지 */
+var VIEWABLE = [];
+function driveIdOf(u){
+  var m = String(u||"").match(/[?&]id=([\w-]{20,})/) || String(u||"").match(/\/d\/([\w-]{20,})/);
+  return m ? m[1] : "";
+}
+function isPic(p){
+  if(p.kind==="drive") return true;
+  if(p.fileId) return true;
+  if(driveIdOf(p.url)) return true;                         // 머리글이 없어도 주소로 알아본다
+  return /\.(jpe?g|png|gif|webp|bmp)(\?|$)/i.test(String(p.url||""));
+}
+
+/* ----- 크게 보기 ----- */
+var lbAt = -1;
+function lbOpen(url){
+  lbAt = VIEWABLE.findIndex(function(x){ return x.url===url; });
+  if(lbAt < 0) lbAt = 0;
+  lbShow();
+  $("#lightbox").classList.add("on");
+}
+function lbShow(){
+  var p = VIEWABLE[lbAt];
+  if(!p){ lbHide(); return; }
+  $("#lbImg").src = p.url;
+  $("#lbCap").textContent = [p.title, p.by, String(p.at).slice(0,16)].filter(Boolean).join("  ·  ");
+  $("#lbNum").textContent = (lbAt+1) + " / " + VIEWABLE.length;
+  $("#lbOpen").hidden = !(p.kind==="drive" && p.fileId);
+}
+function lbHide(){ $("#lightbox").classList.remove("on"); $("#lbImg").src=""; }
+function lbMove(d){
+  if(!VIEWABLE.length) return;
+  lbAt = (lbAt + d + VIEWABLE.length) % VIEWABLE.length;
+  lbShow();
+}
+$("#lbClose").onclick = lbHide;
+$("#lbPrev").onclick = function(){ lbMove(-1) };
+$("#lbNext").onclick = function(){ lbMove(1) };
+$("#lbOpen").onclick = function(){
+  var p = VIEWABLE[lbAt];
+  if(p && p.fileId) window.open("https://drive.google.com/file/d/"+p.fileId+"/view","_blank","noopener");
+};
+$("#lightbox").addEventListener("click", function(e){ if(e.target===this) lbHide(); });
+
+/* 휴대폰에서 좌우로 밀어 넘기기 */
+var swX=0, swY=0;
+$("#lightbox").addEventListener("touchstart", function(e){
+  var t=e.changedTouches[0]; swX=t.clientX; swY=t.clientY;
+}, {passive:true});
+$("#lightbox").addEventListener("touchend", function(e){
+  var t=e.changedTouches[0], dx=t.clientX-swX, dy=t.clientY-swY;
+  if(Math.abs(dx)>45 && Math.abs(dx)>Math.abs(dy)) lbMove(dx<0 ? 1 : -1);
+}, {passive:true});
+document.addEventListener("keydown", function(e){
+  if(!$("#lightbox").classList.contains("on")) return;
+  if(e.key==="Escape") lbHide();
+  else if(e.key==="ArrowLeft") lbMove(-1);
+  else if(e.key==="ArrowRight") lbMove(1);
+});
+function renderPhotos(){
+  $("#galEmpty").hidden=S.photos.length>0;
+  VIEWABLE = S.photos.slice().reverse().filter(isPic);
+  $("#gallery").innerHTML=S.photos.slice().reverse().map(function(p){
+    var head = isPic(p)
+      ? '<button class="pic" data-pic="'+esc(p.url)+'"><img src="'+esc(p.url)+
+        '" alt="'+esc(p.title||"여행 사진")+'" loading="lazy"></button>'
+      : '<a class="linkcard" href="'+esc(p.url)+'" target="_blank" rel="noopener">'+
+        '<b>'+esc(p.title||"앨범 링크")+'</b><span class="sm muted">'+esc(hostOf(p.url))+' ↗</span></a>';
+    return '<figure>'+head+
+      '<figcaption><span>'+esc(p.by||"")+'</span><span class="muted">'+esc(String(p.at).slice(5,16))+'</span>'+
+      ((isAdmin()||p.by===ME)?'<button class="btn tiny ghost" data-del-photo="'+p.row+'">삭제</button>':'')+
+      '</figcaption></figure>'}).join("");
+}
+
+function renderIdeas(){
+  var rows=S.ideas.slice().reverse();
+  $("#ideaEmpty").hidden=rows.length>0;
+  $("#ideaAs").textContent=ME?(ME+" 이름으로 올라갑니다"):"";
+  $("#ideaList").innerHTML=rows.map(function(x){
+    var canDel=isAdmin()||x.by===ME;
+    return '<div class="sug '+(x.done?"done":"")+'"><div class="head"><b>'+esc(x.by)+'</b>'+
+      '<time>'+esc(String(x.at).slice(5,16))+'</time>'+(x.done?'<span class="chip ok">반영</span>':'')+
+      '<span style="margin-left:auto;display:flex;gap:6px">'+
+      (isAdmin()?'<button class="btn tiny" data-idea-done="'+x.row+'" data-done="'+(x.done?1:0)+'">'+(x.done?"되돌리기":"반영")+'</button>':'')+
+      (canDel?'<button class="btn tiny ghost" data-idea-del="'+x.row+'">삭제</button>':'')+
+      '</span></div><p>'+esc(x.text)+'</p></div>'}).join("");
+}
+
+/* ---------- 설정 ---------- */
+var qrDrawn=false;
+function renderSetting(){
+  var url=S.meta["웹앱주소"]||BOOT.url||"";
+  $("#shareUrl").value=url;
+  if(url && !qrDrawn && window.QRCode){
+    try{
+      $("#qrBox").innerHTML="";
+      new QRCode($("#qrBox"),{text:url,width:116,height:116,correctLevel:QRCode.CorrectLevel.M});
+      qrDrawn=true;
+    }catch(e){ $("#qrBox").innerHTML='<span class="sm muted">QR 실패</span>'; }
+  }
+  var me=memberOf(ME)||{};
+  $("#defPw").textContent = S.meta["기본비밀번호"] ? String(S.meta["기본비밀번호"]) : "0000";
+  $("#modeState").textContent = settleMode()==="여행후일괄" ? "여행 후 일괄" : "수시 정산";
+  var cw=calc();
+  $("#waitState").textContent = (waitCounts()?"미정 포함":"확정만") + " · " + cw.n + "명";
+  $("#closeState").textContent = isClosed() ? ("마감됨 · "+closedAt().slice(5,16)) : "진행 중";
+  $("#closeBtn").textContent = isClosed() ? "마감 해제" : "마감";
+  $("#myNameLabel").textContent=ME+(isAdmin()?" · 관리자":"");
+  $("#pwState").textContent = me.pwSet ? "내가 정한 비밀번호" : "기본 비밀번호 사용 중";
+  $("#myAcct").textContent = me.acct ? ((me.bank?me.bank+" ":"")+me.acct) : "미등록";
+  $("#acctBtn").textContent = me.acct ? "수정" : "등록";
+  $("#svVer").textContent = S.meta["서버버전"] || "구버전";
+  var au = String(S.meta["자동업데이트"]||"켬").trim()!=="끔";
+  var src = (BOOT && BOOT.uiFrom) ? BOOT.uiFrom : "";
+  $("#autoUpState").textContent = (au?"켬":"끔") + (src?" · "+src:"");
+  $("#uiFrom").textContent = src ? " ("+src+")" : "";
+}
+function renderLog(rows){
+  $("#logList").innerHTML = rows.length ? '<ul class="rows">'+rows.map(function(r){
+    return '<li><span class="nm">'+esc(r.name)+'</span><span class="chip">'+esc(r.kind)+'</span>'+
+      '<span class="mono sm muted">'+esc(String(r.at))+'</span></li>'}).join("")+'</ul>'
+    : '<div class="empty">기록이 없습니다.</div>';
+}
+
+function renderAll(){
+  renderDash(); renderSettle(); renderExpenses(); renderPlans(); renderMeals(); renderMoves();
+  renderStays(); renderMembers(); renderPhotos(); renderIdeas(); renderSetting();
+  $$(".adminonly").forEach(function(el){el.hidden=!isAdmin()});
+  $("#whoName").textContent=ME;
+  $("#whoRole").textContent=isAdmin()?" · 관리자":"";
+  $("#pwNotice").hidden=!MUSTSET;
+  var anyAdmin=S.members.some(function(m){return m.role==="admin"});
+  $("#adminNotice").hidden=anyAdmin;
+  $("#modeLabel").innerHTML=isAdmin()
+    ? '<b>관리자</b> · 모든 항목을 추가·수정할 수 있습니다'
+    : '<b>'+esc(ME)+'님</b> · 본인 지출·참석여부·건의사항·사진을 올릴 수 있습니다';
+}
+
+/* ---------- 탭 ---------- */
+var TABS=["dash","settle","expense","plan","meal","move","stay","people","photo","idea","setting"];
+function goTab(name){
+  $$(".tab").forEach(function(t){t.setAttribute("aria-selected",String(t.dataset.tab===name))});
+  TABS.forEach(function(k){$("#sec-"+k).hidden=(k!==name)});
+  if(name==="setting") renderSetting();
+  window.scrollTo(0,0);
+}
+$("#tabrow").addEventListener("click",function(e){
+  var b=e.target.closest(".tab"); if(b) goTab(b.dataset.tab);
+});
+
+/* ---------- 폼 ---------- */
+var dlg=$("#dlg");
+function openForm(title,fields,onSave,onDelete){
+  $("#dlgTitle").textContent=title;
+  $("#dlgBody").innerHTML=fields.map(function(f,fi){
+    var id="fld_"+fi, input;          // 항목 이름이 아니라 순번으로 만들어야 겹치지 않는다
+    f._id=id;
+    if(f.type==="select") input='<select id="'+id+'"'+(f.disabled?" disabled":"")+'>'+f.options.map(function(o){
+      return '<option value="'+esc(o)+'"'+(String(f.value||"")===String(o)?" selected":"")+'>'+esc(o||"(선택)")+'</option>'}).join("")+'</select>';
+    else if(f.type==="textarea") input='<textarea id="'+id+'">'+esc(f.value||"")+'</textarea>';
+    else if(f.type==="checkbox") return '<label class="check full"><input type="checkbox" id="'+id+'"'+(f.value?" checked":"")+'> '+esc(f.label)+'</label>';
+    else if(f.type==="people"){
+      var sel=f.value||[];
+      input='<div class="pickbox" id="'+id+'">'+(f.options||[]).filter(Boolean).map(function(nm){
+        return '<label class="pick"><input type="checkbox" value="'+esc(nm)+'"'+
+          (sel.indexOf(nm)>=0?" checked":"")+'><span>'+esc(nm)+'</span></label>'}).join("")+
+        '</div><button type="button" class="btn tiny" data-pickall="'+id+'" style="margin-top:6px">'+
+        (sel.length?'전원 해제':'전원 선택')+'</button>';
+    }
+    else{
+      var extra="";
+      if(f.type==="date") extra=' min="'+DATE_MIN+'" max="'+DATE_MAX+'"';
+      if(f.type==="number") extra=' min="0" step="10"';
+      input='<input type="'+(f.type||"text")+'" id="'+id+'" value="'+esc(f.value==null?"":f.value)+'"'+extra+
+        (f.placeholder?' placeholder="'+esc(f.placeholder)+'"':'')+'>';
+    }
+    return '<div class="'+(f.wide?"full":"")+'"><label class="f" for="'+id+'">'+esc(f.label)+'</label>'+input+
+      (f.hint?'<div class="sm muted" style="margin-top:4px">'+esc(f.hint)+'</div>':'')+'</div>'
+  }).join("")+(onDelete?'<div class="full"><button type="button" class="btn ghost" id="dlgDel">삭제</button></div>':"");
+  $("#dlgOk").onclick=function(){
+    var v={};
+    fields.forEach(function(f){
+      var el=document.getElementById(f._id);
+      if(f.type==="checkbox") v[f.key]=el.checked;
+      else if(f.type==="people") v[f.key]=[].slice.call(el.querySelectorAll("input:checked"))
+                                            .map(function(c){return c.value});
+      else v[f.key]=el.value.trim();
+    });
+    onSave(v); dlg.close();
+  };
+  var pa=$("#dlgBody").querySelector("[data-pickall]");
+  if(pa) pa.onclick=function(){
+    var box=document.getElementById(this.dataset.pickall);
+    var any=box.querySelector("input:checked");
+    [].slice.call(box.querySelectorAll("input")).forEach(function(c){ c.checked=!any });
+    this.textContent = any ? "전원 선택" : "전원 해제";
+  };
+  if(onDelete) $("#dlgDel").onclick=function(){ if(confirm("삭제할까요?")){onDelete();dlg.close()} };
+  dlg.showModal();
+}
+function byRow(arr,row){return arr.filter(function(x){return String(x.row)===String(row)})[0]}
+function memberNames(){return S.members.map(function(m){return m.name})}
+function openPwForm(){
+  openForm("비밀번호 변경",[
+    {key:"o",label:"지금 비밀번호",type:"password",wide:true,value:""},
+    {key:"n1",label:"새 비밀번호 (4~20자)",type:"password",wide:true,value:""},
+    {key:"n2",label:"새 비밀번호 다시 입력",type:"password",wide:true,value:""}
+  ],function(v){
+    if(v.n1!==v.n2){toast("새 비밀번호가 서로 다릅니다");return}
+    if(v.n1.length<4||v.n1.length>20){toast("4~20자로 정해주세요");return}
+    busy(true);
+    google.script.run.withSuccessHandler(function(){
+      busy(false); MUSTSET=false; toast("비밀번호를 바꿨습니다"); call("refresh",[TOKEN]);
+    }).withFailureHandler(function(er){busy(false);fail(er)})
+      .changeMyPassword(TOKEN,v.o,v.n1);
+  });
+}
+
+/* ---------- 클릭 ---------- */
+document.addEventListener("click",function(e){
+  var t=e.target.closest("button"); if(!t) return;
+  var row;
+
+  if(t.dataset.go){ goTab(t.dataset.go); return; }
+  if(t.id==="refreshBtn"){ call("refresh",[TOKEN],"최신 내용을 불러왔습니다"); return; }
+  if(t.id==="logoutBtn"){
+    try{ google.script.run.logout(TOKEN); }catch(_){}   // 서버 정리는 기다리지 않는다
+    store("tripToken",null);
+    TOKEN=""; ME=""; ROLE="member"; MUSTSET=false;
+    busy(false);
+    $("#app").hidden=true; $("#login").hidden=false;
+    $("#loginPw").value=""; $("#loginErr").textContent="";
+    $("#loginName").focus();
+    return;
+  }
+  if(t.id==="pwBtn"||t.id==="pwNoticeBtn"){ openPwForm(); return; }
+  if(t.id==="copyUrl"){ toast(copyText($("#shareUrl").value)?"링크를 복사했습니다":"복사하지 못했습니다 — 주소를 길게 눌러 복사해 주세요"); return; }
+  if(t.dataset.copyAcct){ toast(copyText(t.dataset.copyAcct)?"계좌를 복사했습니다":"복사하지 못했습니다"); return; }
+
+  if(t.id==="acctBtn"){
+    var me=memberOf(ME)||{};
+    openForm("내 계좌 등록",[
+      {key:"bank",label:"은행",value:me.bank||"",placeholder:"국민 / 카카오뱅크"},
+      {key:"acct",label:"계좌번호",value:me.acct||"",placeholder:"숫자만",wide:true,
+       hint:"정산에서 나에게 돈 보낼 사람에게만 보입니다"}
+    ],function(v){ call("saveMyAccount",[TOKEN,v.bank,v.acct],"계좌를 저장했습니다") });
+    return;
+  }
+  if(t.id==="closeBtn"){
+    if(isClosed()){
+      if(confirm("마감을 풀면 다시 지출을 추가·수정할 수 있습니다. 계속할까요?"))
+        call("closeExpenses",[TOKEN,false],"마감을 풀었습니다");
+    }else{
+      if(confirm("지출을 마감하면 아무도 추가·수정할 수 없습니다.\n지금까지 들어온 금액으로 정산을 확정합니다.\n계속할까요?"))
+        call("closeExpenses",[TOKEN,true],"지출을 마감했습니다");
+    }
+    return;
+  }
+  if(t.id==="modeBtn"){
+    openForm("정산 방식",[
+      {key:"mode",label:"언제 송금을 받을까요",type:"select",options:["수시정산","여행후일괄"],value:settleMode(),wide:true,
+       hint:"수시정산 — 여행 전·중에도 미리 보낼 수 있습니다 (선납)\n여행후일괄 — 여행이 끝난 뒤 관리자가 한 번에 정리합니다"}
+    ],function(v){ call("setSettleMode",[TOKEN,v.mode],"정산 방식을 바꿨습니다") });
+    return;
+  }
+  if(t.id==="autoUpBtn"){
+    openForm("화면 자동 업데이트",[
+      {key:"v",label:"최신 화면을 받아올까요",type:"select",options:["켬","끔"],
+       value:(String(S.meta["자동업데이트"]||"켬").trim()==="끔"?"끔":"켬"),wide:true,
+       hint:"켬 — 화면이 고쳐지면 붙여넣기 없이 반영됩니다 (6시간에 한 번 확인)\n"+
+            "끔 — 지금 시트에 들어 있는 화면만 씁니다\n\n"+
+            "어느 쪽이든 지출·일정·사진 같은 자료는 내 구글시트에만 있습니다.\n"+
+            "받아오지 못하면 자동으로 시트 화면을 써서 앱이 멈추지 않습니다."}
+    ],function(v){ call("setAutoUpdate",[TOKEN,v.v],"바꿨습니다") });
+    return;
+  }
+  if(t.id==="autoUpNow"){
+    busy(true,"확인하는 중…");
+    google.script.run.withSuccessHandler(function(r){
+      busy(false);
+      toast((r&&r.msg)||"확인했습니다");
+      if(r&&r.ok) setTimeout(function(){ location.reload() },1200);
+    }).withFailureHandler(function(er){busy(false);fail(er)}).refreshUi(TOKEN);
+    return;
+  }
+  if(t.id==="bkSaveBtn"){
+    busy(true,"백업을 만드는 중…");
+    google.script.run.withSuccessHandler(function(d){
+      busy(false); saveBackupFile(d);
+    }).withFailureHandler(function(er){busy(false);fail(er)}).backupAll(TOKEN);
+    return;
+  }
+  if(t.id==="bkLoadBtn"){ $("#bkFile").click(); return; }
+  if(t.id==="resetBtn"){
+    openForm("다음 여행 준비",[
+      {key:"title",label:"다음 여행 이름",wide:true,value:"",placeholder:"2027년 봄 여행",
+       hint:"지출·송금기록·일정·식사·이동·숙소·건의사항이 비워지고 참석 여부도 다시 받습니다.\n"+
+            "참석자 명단과 계좌, 비밀번호는 그대로 남습니다. 되돌릴 수 없으니 먼저 백업을 내려받아 두세요."},
+      {key:"photos",label:"사진 목록도 비우기 (드라이브 원본은 남습니다)",type:"checkbox",value:false},
+      {key:"access",label:"접속 기록도 비우기",type:"checkbox",value:false}
+    ],function(v){
+      if(!confirm("정말 비울까요? 되돌릴 수 없습니다.")) return;
+      call("resetForNextTrip",[TOKEN,{title:v.title,photos:v.photos,access:v.access}],
+           "다음 여행 준비를 마쳤습니다");
+    });
+    return;
+  }
+  if(t.id==="waitBtn"){
+    var cc=calc();
+    var nIn=cc.n+(waitCounts()?0:cc.nWait), nOut=cc.n-(waitCounts()?cc.nWait:0);
+    openForm("정산 인원",[
+      {key:"v",label:"참석 미정·무응답인 사람을",type:"select",options:["포함","제외"],value:(waitCounts()?"포함":"제외"),wide:true,
+       hint:"포함 — 미정 "+cc.nWait+"명까지 "+nIn+"명으로 나눕니다 (1인당 "+won(shareIf(nIn))+")\n"+
+            "제외 — 확정 참석자 "+nOut+"명으로만 나눕니다 (1인당 "+won(shareIf(nOut))+")\n\n"+
+            "'불참'은 어느 쪽이든 언제나 빠집니다.\n인원이 바뀌어도 이미 보낸 돈은 그대로 두고 차액만 다시 계산됩니다."}
+    ],function(v){ call("setUndecided",[TOKEN,v.v],"정산 인원 기준을 바꿨습니다") });
+    return;
+  }
+  if(t.id==="defPwBtn"){
+    openForm("기본 비밀번호 변경",[
+      {key:"pw",label:"새 기본 비밀번호 (4~20자)",wide:true,value:String(S.meta["기본비밀번호"]||"0000"),
+       hint:"이미 본인 비밀번호를 정한 사람은 영향을 받지 않습니다. 아직 안 정한 사람만 이 번호로 들어옵니다."}
+    ],function(v){
+      if(v.pw.length<4||v.pw.length>20){toast("4~20자로 정해주세요");return}
+      call("setDefaultPassword",[TOKEN,v.pw],"기본 비밀번호를 바꿨습니다");
+    });
+    return;
+  }
+  if(t.id==="logBtn"){
+    busy(true);
+    google.script.run.withSuccessHandler(function(rows){busy(false);renderLog(rows||[])})
+      .withFailureHandler(function(er){busy(false);fail(er)}).accessLog(TOKEN);
+    return;
+  }
+  if(t.id==="metaBtn"){
+    openForm("여행 정보",[
+      {key:"여행이름",label:"여행 이름",wide:true,value:S.meta["여행이름"]||""},
+      {key:"출발일",label:"출발일",type:"date",value:String(S.meta["출발일"]||"").slice(0,10)},
+      {key:"종료일",label:"종료일",type:"date",value:String(S.meta["종료일"]||"").slice(0,10)},
+      {key:"장소",label:"장소",wide:true,value:S.meta["장소"]||""},
+      {key:"관리자이름",label:"관리자 (쉼표로 여러 명)",wide:true,value:S.meta["관리자이름"]||""},
+      {key:"최대인원",label:"최대 인원",type:"number",value:S.meta["최대인원"]||40}
+    ],function(v){call("saveMeta",[TOKEN,v],"저장했습니다")});
+    return;
+  }
+
+  if(t.id==="payMine"){ openPayForm(ME,"",Math.round(-myState().bal)); return; }
+  if(t.id==="payAdd"){ openPayForm(ME,"",""); return; }
+  if(t.dataset.payTo){ openPayForm(t.dataset.payFrom, t.dataset.payTo, Number(t.dataset.payAmt)||0); return; }
+  if((row=t.dataset.payDel)){
+    if(confirm("이 기록을 지울까요? 잔액이 다시 계산됩니다.")) call("deletePayment",[TOKEN,row],"기록을 지웠습니다");
+    return;
+  }
+
+  if(t.id==="addExpense"||(row=t.dataset.editExp)){
+    var ex=row?byRow(S.expenses,row):null;
+    var payerField = isAdmin()
+      ? {key:"결제자",label:"결제자",type:"select",options:[""].concat(memberNames()),value:ex?ex.payer:ME}
+      : {key:"결제자",label:"결제자",type:"select",options:[ME],value:ME,disabled:true,hint:"본인 결제 건만 등록할 수 있습니다"};
+    openForm(ex?"지출 수정":"지출 추가",[
+      payerField,
+      {key:"카드",label:"결제수단",value:ex?ex.method:"",placeholder:"KB 신용 / 현금"},
+      {key:"사유",label:"사유",value:ex?ex.reason:"",placeholder:"숙소예약"},
+      {key:"금액",label:"금액 (원)",type:"number",value:ex?ex.amount:""},
+      {key:"비고",label:"비고",wide:true,value:ex?ex.note:""},
+      {key:"지불현황",label:"지불현황",type:"select",options:["미지불","완료","완료(취소가능)","취소"],value:ex?ex.status:"미지불"},
+      {key:"참여자",label:"이 지출을 나눌 사람",type:"people",wide:true,
+       options:memberNames(),value:ex?ex.with:[],
+       hint:"아무도 고르지 않으면 참석자 전원이 나눕니다. 일부만 먹거나 탄 비용이면 그 사람들만 골라주세요."},
+      {key:"정산제외",label:"정산에서 제외",type:"checkbox",value:ex?ex.excluded:false}
+    ],function(v){
+      if(!isAdmin()) v["결제자"]=ME;
+      v["금액"]=Number(v["금액"])||0;
+      v["참여자"]=(v["참여자"]||[]).join(", ");
+      v["정산제외"]=v["정산제외"]?"O":"";
+      if(ex) v._row=ex.row;
+      call("saveExpense",[TOKEN,v],"저장했습니다");
+    }, ex?function(){call("deleteExpense",[TOKEN,ex.row],"삭제했습니다")}:null);
+    return;
+  }
+
+  if(t.id==="addPlan"||(row=t.dataset.editPlan)){
+    var p2=row?byRow(S.plans,row):null;
+    openForm(p2?"일정 수정":"일정 추가",[
+      {key:"날짜",label:"날짜",type:"date",value:p2?p2.date:String(S.meta["출발일"]||"").slice(0,10)},
+      {key:"시간",label:"시간",type:"time",value:p2?p2.time:""},
+      {key:"내용",label:"내용",wide:true,value:p2?p2.title:"",placeholder:"안양 출발 / 체크인"},
+      {key:"장소",label:"장소",wide:true,value:p2?p2.place:""},
+      {key:"메모",label:"메모",type:"textarea",wide:true,value:p2?p2.memo:""}
+    ],function(v){ if(p2) v._row=p2.row; call("savePlan",[TOKEN,v],"저장했습니다") },
+      p2?function(){call("deletePlan",[TOKEN,p2.row],"삭제했습니다")}:null);
+    return;
+  }
+
+  if(t.id==="addMeal"||(row=t.dataset.editMeal)){
+    var ml=row?byRow(S.meals,row):null;
+    openForm(ml?"식사 수정":"식사 추가",[
+      {key:"날짜",label:"날짜",type:"date",value:ml?ml.date:String(S.meta["출발일"]||"").slice(0,10)},
+      {key:"구분",label:"구분",type:"select",options:SLOTS,value:ml?ml.slot:"저녁"},
+      {key:"메뉴",label:"메뉴",wide:true,value:ml?ml.menu:"",placeholder:"삼겹살 바베큐"},
+      {key:"장소",label:"장소",wide:true,value:ml?ml.place:"",placeholder:"숙소 마당"},
+      {key:"비고",label:"비고",type:"textarea",wide:true,value:ml?ml.note:"",placeholder:"1인 2만원 · 술은 각자"}
+    ],function(v){ if(ml) v._row=ml.row; call("saveMeal",[TOKEN,v],"저장했습니다") },
+      ml?function(){call("deleteMeal",[TOKEN,ml.row],"삭제했습니다")}:null);
+    return;
+  }
+
+  if(t.id==="addMove"||(row=t.dataset.editMove)){
+    var mv=row?byRow(S.moves,row):null;
+    openForm(mv?"이동편 수정":"이동편 추가",[
+      {key:"날짜",label:"날짜",type:"date",value:mv?mv.date:String(S.meta["출발일"]||"").slice(0,10)},
+      {key:"구분",label:"구분",type:"select",options:MOVE_KINDS,value:mv?mv.kind:"출발"},
+      {key:"팀",label:"팀 이름",value:mv?mv.team:"",placeholder:"1호차 / 안양팀"},
+      {key:"수단",label:"수단",value:mv?mv.how:"",placeholder:"자차 / KTX / 버스"},
+      {key:"차량/편명",label:"차량 · 편명",value:mv?mv.car:"",placeholder:"카니발 12가3456"},
+      {key:"운전자",label:"운전자",type:"select",options:[""].concat(memberNames()),value:mv?mv.driver:""},
+      {key:"출발지",label:"출발지",value:mv?mv.from:"",placeholder:"안양역"},
+      {key:"출발시각",label:"출발시각",type:"time",value:mv?mv.at:""},
+      {key:"도착지",label:"도착지",value:mv?mv.to:"",placeholder:"숙소"},
+      {key:"탑승자",label:"탑승자",type:"textarea",wide:true,value:mv?mv.riders.join(", "):"",
+       hint:"명단의 이름을 쉼표로 구분해 적어주세요. 적힌 사람 대시보드에 '내 이동편'으로 뜹니다."},
+      {key:"비고",label:"비고",type:"textarea",wide:true,value:mv?mv.note:""}
+    ],function(v){ if(mv) v._row=mv.row; call("saveMove",[TOKEN,v],"저장했습니다") },
+      mv?function(){call("deleteMove",[TOKEN,mv.row],"삭제했습니다")}:null);
+    return;
+  }
+
+  if(t.id==="addStay"||(row=t.dataset.editStay)){
+    var s2=row?byRow(S.stays,row):null;
+    openForm(s2?"숙소 수정":"숙소 추가",[
+      {key:"숙소명",label:"숙소명",wide:true,value:s2?s2.name:""},
+      {key:"주소",label:"주소",wide:true,value:s2?s2.addr:""},
+      {key:"체크인",label:"체크인",value:s2?s2.checkin:"",placeholder:"11/14 15:00"},
+      {key:"체크아웃",label:"체크아웃",value:s2?s2.checkout:"",placeholder:"11/15 11:00"},
+      {key:"예약처",label:"예약처",value:s2?s2.agency:"",placeholder:"야놀자(NOL)"},
+      {key:"예약번호",label:"예약번호",value:s2?s2.code:""},
+      {key:"연락처",label:"연락처",value:s2?s2.phone:""},
+      {key:"옵션",label:"옵션",value:s2?s2.option:"",placeholder:"바베큐 / 인원추가"},
+      {key:"지도링크",label:"지도 링크",wide:true,value:s2?s2.map:""},
+      {key:"메모",label:"메모",type:"textarea",wide:true,value:s2?s2.memo:""}
+    ],function(v){ if(s2) v._row=s2.row; call("saveStay",[TOKEN,v],"저장했습니다") },
+      s2?function(){call("deleteStay",[TOKEN,s2.row],"삭제했습니다")}:null);
+    return;
+  }
+
+  if(t.id==="addMember"||(row=t.dataset.editMem)){
+    var m2=row?byRow(S.members,row):null;
+    openForm(m2?"인원 수정":"인원 추가",[
+      {key:"이름",label:"이름",value:m2?m2.name:"",hint:"로그인할 때 쓰는 아이디입니다"},
+      {key:"거주지",label:"거주지",value:m2?m2.region:""},
+      {key:"출발지(대안)",label:"출발지(대안)",value:m2?m2.alt:""},
+      {key:"권한",label:"권한",type:"select",options:["member","admin"],value:m2?m2.role:"member"}
+    ],function(v){ if(m2) v._row=m2.row; call("saveMember",[TOKEN,v],"저장했습니다") },
+      m2?function(){call("deleteMember",[TOKEN,m2.row],"삭제했습니다")}:null);
+    return;
+  }
+
+  if(t.dataset.pic){ lbOpen(t.dataset.pic); return; }
+  if(t.id==="addPhotoFile"){ $("#photoFile").click(); return; }
+
+  if(t.id==="addPhotoLink"){
+    openForm("사진 링크 추가",[
+      {key:"title",label:"제목",wide:true,value:"",placeholder:"첫째날 저녁 사진들"},
+      {key:"url",label:"링크 주소",wide:true,value:"",placeholder:"https://photos.app.goo.gl/..."}
+    ],function(v){ call("addPhoto",[TOKEN,v],"올렸습니다") });
+    return;
+  }
+  if((row=t.dataset.delPhoto)){ if(confirm("삭제할까요?")) call("deletePhoto",[TOKEN,row],"삭제했습니다"); return; }
+
+  if(t.dataset.rsvp){
+    var who=isAdmin()?($("#rsvpWho").value||ME):ME;
+    var next=t.dataset.rsvp, cur=calc(), mem=memberOf(who);
+    /* 정산 인원이 달라지는 변경이면, 1인당 금액이 얼마가 되는지 먼저 알려준다 */
+    if(mem && cur.total>0){
+      var wasIn=joins(mem);
+      var willIn=(next==="불참") ? false : (next==="참석" ? true : waitCounts());
+      if(wasIn!==willIn){
+        var n2=cur.n+(willIn?1:-1);
+        if(n2<1){ toast("정산할 인원이 없어집니다"); return; }
+        var msg=who+"님을 "+next+"(으)로 바꾸면\n\n"+
+          "정산 인원 "+cur.n+"명 → "+n2+"명\n"+
+          "1인당 "+won(cur.share)+" → "+won(shareIf(n2))+"\n\n"+
+          "이미 보낸 돈은 그대로 두고 모자란 만큼만 더 보내거나\n남는 만큼 돌려받도록 다시 계산됩니다.\n\n이대로 바꿀까요?";
+        if(!confirm(msg)) return;
+      }
+    }
+    call("setRsvp",[TOKEN,who,next],"기록했습니다");
+    return;
+  }
+  if((row=t.dataset.ideaDone)){ call("toggleIdea",[TOKEN,row,t.dataset.done!=="1"],"반영했습니다"); return; }
+  if((row=t.dataset.ideaDel)){ if(confirm("삭제할까요?")) call("deleteIdea",[TOKEN,row],"삭제했습니다"); return; }
+});
+
+/* 사진은 브라우저에서 먼저 줄여서 올린다 (원본 그대로 올리면 느리고 용량만 먹는다) */
+function shrinkPhoto(file, maxSide, quality){
+  return new Promise(function(done, fail){
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function(){
+      var w=img.naturalWidth, h=img.naturalHeight;
+      var scale = Math.min(1, maxSide/Math.max(w,h));
+      var c = document.createElement("canvas");
+      c.width = Math.max(1,Math.round(w*scale));
+      c.height = Math.max(1,Math.round(h*scale));
+      var g = c.getContext("2d");
+      g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height);
+      g.drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      try{ done(c.toDataURL("image/jpeg", quality)); }
+      catch(err){ fail(new Error("사진을 변환하지 못했습니다")); }
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url);
+      fail(new Error("이 사진은 열 수 없습니다 (아이폰 HEIC 형식이면 설정에서 '높은 호환성'으로 바꿔주세요)")); };
+    img.src = url;
+  });
+}
+
+/* 고른 사진을 먼저 줄여서 보여주고, 확인한 것만 올린다 */
+var UP = [];
+
+/* ---------- 백업 내려받기 · 되돌리기 ---------- */
+function saveBackupFile(d){
+  var name="여행상황판-백업-"+(new Date()).toISOString().slice(0,10)+".json";
+  var text=JSON.stringify(d,null,2);
+  try{
+    var a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([text],{type:"application/json"}));
+    a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove() },1500);
+    toast("백업 파일을 내려받았습니다");
+  }catch(err){
+    /* 내려받기가 막히는 환경이면 복사할 수 있게 띄워준다 */
+    $("#logList").innerHTML='<div class="panel pad"><div class="sm muted" style="margin-bottom:8px">'+
+      '내려받기가 막혀 있습니다. 아래 내용을 복사해 메모장에 <b>'+esc(name)+'</b> 로 저장하세요.</div>'+
+      '<textarea readonly style="width:100%;height:200px" id="bkText"></textarea></div>';
+    $("#bkText").value=text;
+    $("#bkText").select();
+  }
+}
+$("#bkFile").addEventListener("change", function(e){
+  var f=e.target.files&&e.target.files[0]; e.target.value="";
+  if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var dump;
+    try{ dump=JSON.parse(rd.result); }catch(_){ toast("백업 파일을 읽지 못했습니다"); return; }
+    if(!dump || !dump.sheets){ toast("이 앱의 백업 파일이 아닙니다"); return; }
+    if(!confirm("지금 자료를 지우고 백업("+(dump.savedAt||"시각 미상")+") 내용으로 되돌립니다.\n\n"+
+                "비밀번호는 지금 것이 그대로 유지됩니다.\n계속할까요?")) return;
+    busy(true,"되돌리는 중…");
+    google.script.run.withSuccessHandler(function(r){
+      busy(false);
+      toast("되돌렸습니다 — "+((r&&r.restored||[]).length)+"개 시트");
+      call("refresh",[TOKEN]);
+    }).withFailureHandler(function(er){busy(false);fail(er)}).restoreAll(TOKEN,dump);
+  };
+  rd.readAsText(f);
+});
+
+$("#photoFile").addEventListener("change", function(e){
+  var files = Array.prototype.slice.call(e.target.files||[]);
+  e.target.value = "";
+  if(!files.length) return;
+
+  UP = [];
+  busy(true, "사진 준비 중…");
+  var i = 0;
+  var step = function(){
+    if(i >= files.length){
+      busy(false);
+      if(!UP.length){ toast("열 수 있는 사진이 없습니다"); return; }
+      paintUp();
+      $("#upDlg").showModal();
+      return;
+    }
+    var file = files[i++];
+    busy(true, "사진 준비 중… (" + i + "/" + files.length + ")");
+    shrinkPhoto(file, 1600, 0.82).then(function(dataUrl){
+      UP.push({ name:file.name.replace(/\.[^.]+$/,"").slice(0,60), dataUrl:dataUrl });
+      step();
+    }).catch(function(err){
+      toast(err.message || "한 장을 읽지 못했습니다");
+      step();
+    });
+  };
+  step();
+});
+
+function paintUp(){
+  $("#upTitle").textContent = "올릴 사진 " + UP.length + "장";
+  $("#upList").innerHTML = UP.map(function(u,ix){
+    return '<div class="th"><img src="'+u.dataUrl+'" alt="">'+
+      '<button class="x" data-up-del="'+ix+'" title="빼기">×</button>'+
+      '<div class="nm2">'+esc(u.name)+'</div></div>';
+  }).join("");
+  var kb = Math.round(UP.reduce(function(a,u){ return a + u.dataUrl.length*0.75; },0)/1024);
+  $("#upNote").textContent = "크기를 줄여서 올립니다 · 모두 합쳐 약 " + kb.toLocaleString("ko-KR") + "KB";
+  $("#upGo").disabled = !UP.length;
+}
+$("#upList").addEventListener("click", function(e){
+  var b = e.target.closest("[data-up-del]");
+  if(!b) return;
+  UP.splice(Number(b.dataset.upDel), 1);
+  if(!UP.length){ $("#upDlg").close(); return; }
+  paintUp();
+});
+$("#upCancel").onclick = function(){ UP = []; $("#upDlg").close(); };
+
+$("#upGo").onclick = function(){
+  $("#upDlg").close();
+  var total = UP.length, okCount = 0, i = 0;
+  var next = function(){
+    if(i >= total){
+      busy(false);
+      toast(okCount ? (okCount + "장 올렸습니다") : "올리지 못했습니다");
+      UP = [];
+      if(okCount) call("refresh",[TOKEN]);
+      return;
+    }
+    var item = UP[i++];
+    busy(true, "사진 올리는 중… (" + i + "/" + total + ")");
+    google.script.run
+      .withSuccessHandler(function(d){ okCount++; adopt(d); next(); })
+      .withFailureHandler(function(er){ toast(er&&er.message?er.message:"한 장을 올리지 못했습니다"); next(); })
+      .uploadPhoto(TOKEN, item.name, "image/jpeg", item.dataUrl.split(",")[1]);
+  };
+  next();
+};
+
+$("#ideaForm").addEventListener("submit",function(e){
+  e.preventDefault();
+  var txt=$("#ideaText").value.trim();
+  if(!txt){toast("내용을 입력해 주세요");return}
+  busy(true);
+  google.script.run
+    .withSuccessHandler(function(d){busy(false);$("#ideaText").value="";adopt(d);toast("건의사항을 남겼습니다")})
+    .withFailureHandler(function(er){busy(false);fail(er)})
+    .addIdea(TOKEN,txt);
+});
+
+/* ---------- 로그인 ---------- */
+function enterApp(res){
+  TOKEN=res.token||TOKEN; ME=res.name; ROLE=res.role; MUSTSET=!!res.mustSet;
+  store("tripToken",TOKEN);
+  $("#login").hidden=true; $("#app").hidden=false;
+  adopt(res.data);
+  if(res.firstAdmin) setTimeout(function(){
+    toast("처음 들어오셨네요 — "+ME+"님이 이 여행의 관리자가 되었습니다");},600);
+  else if(!isAdmin() && settleMode()==="여행후일괄" && !isClosed()) setTimeout(function(){
+    toast("여행이 끝난 뒤 한 번에 정산합니다. 송금은 여행 끝나고 나서 해주세요!");},800);
+  else if(!isAdmin() && isClosed()) setTimeout(function(){
+    toast("지출이 마감됐습니다 — 정산 탭에서 보낼 금액을 확인해 주세요");},800);
+}
+$("#loginTitle").textContent=BOOT.title||"여행 상황판";
+// 한 번 들어온 사람은 이름을 다시 칠 필요가 없게
+var lastName=load("tripName");
+if(lastName){ $("#loginName").value=lastName; setTimeout(function(){$("#loginPw").focus()},80); }
+else setTimeout(function(){$("#loginName").focus()},80);
+
+$("#loginForm").addEventListener("submit",function(e){
+  e.preventDefault();
+  var n=$("#loginName").value.trim(), p=$("#loginPw").value;
+  if(!n){ $("#loginErr").textContent="이름을 입력해 주세요."; return; }
+  $("#loginErr").textContent=""; busy(true,"들어가는 중…");
+  google.script.run
+    .withSuccessHandler(function(res){busy(false);store("tripName",res.name);enterApp(res)})
+    .withFailureHandler(function(er){busy(false);$("#loginErr").textContent=er&&er.message?er.message:"로그인하지 못했습니다"})
+    .login(n,p);
+});
+
+var saved=load("tripToken");
+if(saved){
+  busy(true,"불러오는 중…");
+  google.script.run
+    .withSuccessHandler(function(res){busy(false);TOKEN=saved;enterApp(res)})
+    .withFailureHandler(function(){busy(false);store("tripToken",null)})
+    .session(saved);
+}
+</script>
+</body>
+</html>

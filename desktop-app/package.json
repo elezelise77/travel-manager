@@ -1,0 +1,62 @@
+{
+  "name": "trip-board",
+  "version": "2.0.0",
+  "description": "여행 상황판 데스크톱 앱",
+  "main": "main.js",
+  "author": "Trip Board",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "portable": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^32.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.tripboard.app",
+    "productName": "여행 상황판",
+    "files": [
+      "main.js",
+      "preload.js",
+      "ui/**/*",
+      "code/**/*",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "asar": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "여행 상황판",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "TripBoard-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "TripBoard-Portable-${version}.${ext}"
+    }
+  }
+}
