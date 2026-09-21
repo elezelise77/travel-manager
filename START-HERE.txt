@@ -1,4 +1,4 @@
-여행 상황판 (Travel Manager) v2.1.0
+여행 상황판 (Travel Manager) v2.2.0
 ====================================
 
 이번에 바뀐 것
@@ -60,7 +60,7 @@ google-apps-script 폴더의 Code.gs 와 Index.html 을 붙여넣고 저장,
 
 지출대장에 '참여자' 열이 자동으로 추가됩니다. 기존 지출은 그대로 있습니다.
 
-설정 탭 맨 아래가 [화면 2.1.0 · 서버 2.1.0] 이면 반영된 것입니다.
+설정 탭 맨 아래가 [화면 2.2.0 · 서버 2.2.0] 이면 반영된 것입니다.
 괄호로 출처도 같이 나옵니다.  최신 / 최신(보관중) / 시트
 
 
@@ -75,8 +75,7 @@ google-apps-script 폴더의 Code.gs 와 Index.html 을 붙여넣고 저장,
     npm install
     npm run dist
 
-  -> dist 폴더에 TripBoard-Setup-2.0.0.exe / TripBoard-Portable-2.0.0.exe
-     (앱 버전은 2.0.0 그대로입니다 — 앱 자체는 바뀌지 않았습니다)
+  -> dist 폴더에 TripBoard-Setup-2.2.0.exe / TripBoard-Portable-2.2.0.exe
 
 이 code 폴더가 앱이 복사해 주는 코드이고, 업데이트 알림의 기준도 이 파일입니다.
 

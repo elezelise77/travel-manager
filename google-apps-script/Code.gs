@@ -3,7 +3,7 @@
  * 구글 시트 = DB / 이름+비밀번호 로그인
  *******************************************************/
 
-var APP_VERSION = '2.1.0';
+var APP_VERSION = '2.2.0';
 var TZ = 'Asia/Seoul';
 var TOKEN_HOURS = 24 * 14;
 var DEFAULT_MAX_PEOPLE = 40;
@@ -20,7 +20,7 @@ var ACCESS_KEEP = 400;        // 접속기록 보관 행 수
  * 배포하는 사람은 아래 주소만 본인 것으로 바꾸면 됩니다. (끝에 / 를 붙입니다)
  *   예) https://donghyun.github.io/travel-manager/
  * 비워두면 자동 업데이트를 쓰지 않습니다.                                   */
-var UPDATE_URL = '';
+var UPDATE_URL = 'https://elezelise77.github.io/travel-manager/';
 var UI_CACHE_KEY = 'UIHTML';
 var UI_CACHE_SEC = 21600;     // 6시간
 var UI_CHUNK = 30000;         // 캐시 한 칸에 담을 글자 수 (한글은 한 자가 3바이트)
@@ -154,6 +154,14 @@ function uiHtml_(){
   return { html:'', from:'시트(가져오기 실패)' };
 }
 
+/** 이 앱이 붙어 있는 시트와 Apps Script 편집기 주소 (관리 앱이 자동으로 채워 넣는다) */
+function links_(){
+  var o = {};
+  try{ o.sheetUrl  = ss_().getUrl(); }catch(e){}
+  try{ o.editorUrl = 'https://script.google.com/home/projects/' + ScriptApp.getScriptId() + '/edit'; }catch(e){}
+  return o;
+}
+
 /* ================= 진입점 ================= */
 function doGet(){
   ensureSetup_();
@@ -193,7 +201,8 @@ function doPost(e){
     var body = {};
     try{ body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); }catch(_){}
     switch(body.action){
-      case 'ping'  : return out({ok:true, title:cfg_('여행이름')||'여행 상황판', app:'trip-board', version:APP_VERSION});
+      case 'ping'  : return out(Object.assign({ok:true, title:cfg_('여행이름')||'여행 상황판',
+                                   app:'trip-board', version:APP_VERSION}, links_()));
       case 'login' : return out({ok:true, result:login(body.name, body.pw)});
       case 'data'  : return out({ok:true, result:getData(body.token)});
       case 'backup': return out({ok:true, result:backupAll(body.token)});
@@ -589,6 +598,11 @@ function getData(token){
   });
   try{ meta['웹앱주소'] = ScriptApp.getService().getUrl(); }catch(e){}
   meta['서버버전'] = APP_VERSION;
+  if(u.role === 'admin'){
+    var lk = links_();
+    meta['시트주소']   = lk.sheetUrl  || '';
+    meta['편집기주소'] = lk.editorUrl || '';
+  }
   return {
     meta    : meta,
     members : readSheet_(SHEETS.MEMBER).filter(f_('이름')).map(function(r){

@@ -389,7 +389,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
       <div class="err" id="loginErr"></div>
       <button class="btn primary block" type="submit">들어가기</button>
     </form>
-    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.1.0</span></div>
+    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.2.0</span></div>
   </div>
 </div>
 
@@ -660,6 +660,9 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
           <button class="btn tiny" id="bkLoadBtn">파일 고르기</button></li>
         <li><span class="nm">다음 여행 준비 <div class="sm muted">명단·계좌는 남기고 지출·일정·숙소만 비웁니다</div></span>
           <button class="btn tiny" id="resetBtn">비우기</button></li>
+        <li><span class="nm">연결 주소 <div class="sm muted">이 앱이 붙어 있는 구글시트와 코드 편집기 (관리자만 보입니다)</div></span>
+          <a class="btn tiny" id="lnkSheet" target="_blank" rel="noopener">시트 열기</a>
+          <a class="btn tiny" id="lnkEditor" target="_blank" rel="noopener">코드 편집기</a></li>
         <li><span class="nm">화면 자동 업데이트 <div class="sm muted">만든 곳에서 최신 화면을 받아옵니다. 꺼두면 지금 화면 그대로 씁니다</div></span>
           <span class="sm" id="autoUpState">—</span>
           <button class="btn tiny" id="autoUpBtn">변경</button>
@@ -670,7 +673,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
     </div>
 
     <div class="sm muted" style="text-align:center;margin-top:20px">
-      화면 <span class="mono" id="uiVer">2.1.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
+      화면 <span class="mono" id="uiVer">2.2.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
     </div>
   </section>
 </main>
@@ -1466,6 +1469,10 @@ function renderSetting(){
   var au = String(S.meta["자동업데이트"]||"켬").trim()!=="끔";
   var src = (BOOT && BOOT.uiFrom) ? BOOT.uiFrom : "";
   $("#autoUpState").textContent = (au?"켬":"끔") + (src?" · "+src:"");
+  [["#lnkSheet","시트주소"],["#lnkEditor","편집기주소"]].forEach(function(p){
+    var a=$(p[0]), u=String(S.meta[p[1]]||"");
+    if(u){ a.href=u; a.hidden=false; } else { a.removeAttribute("href"); a.hidden=true; }
+  });
   $("#uiFrom").textContent = src ? " ("+src+")" : "";
 }
 function renderLog(rows){

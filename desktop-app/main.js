@@ -8,17 +8,27 @@ const fs = require('fs');
 
 const CONFIG_FILE = () => path.join(app.getPath('userData'), 'config.json');
 
+/* 여행방 목록은 앱을 다시 설치해도 남는 곳(%APPDATA%\trip-board)에 둔다.
+ * 쓰다가 꺼져도 날아가지 않게: 임시 파일에 먼저 쓰고 바꿔치기 + 직전본을 .bak 으로 보관. */
+function parseCfg(file) {
+  const c = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (!c || !Array.isArray(c.rooms)) throw new Error('bad');
+  return c;
+}
 function readConfig() {
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_FILE(), 'utf8'));
-  } catch (e) {
-    return { rooms: [], current: -1 };
+  for (const f of [CONFIG_FILE(), CONFIG_FILE() + '.bak']) {
+    try { return parseCfg(f); } catch (e) {}
   }
+  return { rooms: [], current: -1 };
 }
 function writeConfig(cfg) {
   try {
-    fs.mkdirSync(path.dirname(CONFIG_FILE()), { recursive: true });
-    fs.writeFileSync(CONFIG_FILE(), JSON.stringify(cfg, null, 2), 'utf8');
+    if (!cfg || !Array.isArray(cfg.rooms)) return false;
+    const file = CONFIG_FILE(), tmp = file + '.tmp';
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(tmp, JSON.stringify(cfg, null, 2), 'utf8');
+    if (fs.existsSync(file)) { try { fs.copyFileSync(file, file + '.bak'); } catch (e) {} }
+    fs.renameSync(tmp, file);
     return true;
   } catch (e) {
     return false;
@@ -118,7 +128,11 @@ ipcMain.handle('api:call', async (_e, { url, payload }) => {
 });
 
 /* ---------- 도우미 ---------- */
-ipcMain.handle('shell:open', (_e, url) => { shell.openExternal(url); return true; });
+ipcMain.handle('shell:open', (_e, url) => {
+  if (!/^https:\/\//i.test(String(url || ''))) return false;   // 웹 주소만 연다
+  shell.openExternal(url);
+  return true;
+});
 
 ipcMain.handle('room:window', (_e, { url, title }) => {
   if (!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(String(url || ''))) return false;
