@@ -94,6 +94,11 @@ section[hidden]{display:none!important}
 .notice .btn{margin-left:auto}
 .notice.warn{background:var(--sunken);border-color:var(--line-2)}
 .rcbody{display:flex;flex-direction:column;gap:14px;padding:4px 0}
+.rcdrop{margin:10px 0;padding:18px 12px;border:2px dashed var(--line-2);border-radius:12px;
+  text-align:center;font-size:13px;color:var(--ink-3);background:var(--surface);cursor:pointer}
+.rcdrop b{color:var(--accent-ink)}
+.rcdrop:focus{outline:2px solid var(--accent);outline-offset:2px}
+.rcdrop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
 .rcitems{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
 .rcitem{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-top:1px solid var(--line);cursor:pointer}
 .rcitem:first-child{border-top:0}
@@ -104,7 +109,7 @@ section[hidden]{display:none!important}
 .rcsum{display:flex;align-items:baseline;gap:8px;justify-content:flex-end;font-size:14px}
 .rcsum b{font-family:"IBM Plex Mono",monospace;font-size:18px;color:var(--accent-ink)}
 .rcway{border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:var(--sunken)}
-.rcway b{display:block;margin-bottom:4px}
+.rcway > b{display:block;margin-bottom:4px}   /* 소제목만 줄바꿈 (본문 안의 b 는 그대로) */
 .rcway textarea{width:100%;margin:9px 0;font-size:13px;line-height:1.6}
 .rcway .btn{margin-top:4px}
 .rcbusy{font-size:13px;color:var(--accent-ink);min-height:18px}
@@ -407,7 +412,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
       <div class="err" id="loginErr"></div>
       <button class="btn primary block" type="submit">들어가기</button>
     </form>
-    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.4.0</span></div>
+    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.5.0</span></div>
   </div>
 </div>
 
@@ -695,7 +700,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
     </div>
 
     <div class="sm muted" style="text-align:center;margin-top:20px">
-      화면 <span class="mono" id="uiVer">2.4.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
+      화면 <span class="mono" id="uiVer">2.5.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
     </div>
   </section>
 </main>
@@ -718,8 +723,12 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
   <div class="rcbody">
     <div class="rcway">
       <b>① 사진으로</b>
-      <div class="sm muted">종이 영수증을 찍거나 화면을 캡처한 사진을 고르세요. 여러 장도 됩니다.</div>
-      <button class="btn primary" id="rcPick" type="button">사진 고르기</button>
+      <div class="sm muted">화면을 캡처했다면 <b>여기에 그냥 붙여넣으세요</b> (Ctrl+V).
+        저장할 필요 없습니다. 사진 파일을 끌어다 놓아도 되고, 여러 장도 됩니다.</div>
+      <div class="rcdrop" id="rcDrop" tabindex="0">
+        <b>Ctrl + V</b> 로 붙여넣기 · 또는 여기로 끌어다 놓기
+      </div>
+      <button class="btn" id="rcPick" type="button">파일에서 고르기</button>
     </div>
     <div class="rcway">
       <b>② 글자로 붙여넣기</b>
@@ -1668,7 +1677,9 @@ function renderAll(){
 
 /* ---------- 탭 ---------- */
 var TABS=["dash","settle","expense","plan","meal","move","stay","people","photo","idea","setting"];
+var TAB = "dash";
 function goTab(name){
+  TAB = name;
   $$(".tab").forEach(function(t){t.setAttribute("aria-selected",String(t.dataset.tab===name))});
   TABS.forEach(function(k){$("#sec-"+k).hidden=(k!==name)});
   if(name==="setting") renderSetting();
@@ -2116,6 +2127,87 @@ $("#bkFile").addEventListener("change", function(e){
 });
 
 $("#rcItemList").addEventListener("change", function(){ rcItemSum(); });
+
+/* ---------- 붙여넣기 · 끌어다 놓기 ----------
+ * 화면을 캡처하면 클립보드에 그림이 들어간다. 파일로 저장하지 않고 바로 받는다. */
+function imagesFrom(dt){
+  var out = [];
+  if(!dt) return out;
+  var items = dt.items || [];
+  for(var i=0; i<items.length; i++){
+    if(items[i].kind === "file" && String(items[i].type).indexOf("image/") === 0){
+      var f = items[i].getAsFile();
+      if(f) out.push(f);
+    }
+  }
+  if(!out.length && dt.files){
+    for(var j=0; j<dt.files.length; j++){
+      if(String(dt.files[j].type).indexOf("image/") === 0) out.push(dt.files[j]);
+    }
+  }
+  return out;
+}
+var RCBUSY = false;                       // 같은 붙여넣기를 두 번 처리하지 않게
+function rcTakeImages(files){
+  if(!files.length || RCBUSY) return false;
+  RCBUSY = true;
+  setTimeout(function(){ RCBUSY = false; }, 1200);
+  RCQ = files.slice(0, 10);
+  if($("#rcDlg").open) $("#rcDlg").close();
+  rcNext();
+  return true;
+}
+
+/* 영수증 창 안에서 붙여넣기 */
+$("#rcDlg").addEventListener("paste", function(e){
+  var imgs = imagesFrom(e.clipboardData);
+  if(!imgs.length) return;                 // 글자면 평소대로 칸에 들어가게 둔다
+  e.preventDefault();
+  e.stopPropagation();                     // 아래 문서 전체 처리가 또 받지 않게
+  rcTakeImages(imgs);
+});
+
+/* 지출대장 탭을 보고 있을 때는 창을 열지 않아도 바로 붙여넣기 */
+document.addEventListener("paste", function(e){
+  if($("#rcDlg").open) return;             // 창 안에서는 위 처리가 맡는다
+  if(document.querySelector("dialog[open]")) return;
+  if(TAB !== "expense") return;
+  var el = document.activeElement;
+  if(el && /INPUT|TEXTAREA|SELECT/.test(el.tagName)) return;
+  if(isClosed()) return;
+  var imgs = imagesFrom(e.clipboardData);
+  if(!imgs.length) return;
+  e.preventDefault();
+  rcTakeImages(imgs);
+});
+
+/* 끌어다 놓기 */
+["dragenter","dragover"].forEach(function(t){
+  $("#rcDrop").addEventListener(t, function(e){
+    e.preventDefault(); e.stopPropagation();
+    this.classList.add("over");
+  });
+});
+["dragleave","drop"].forEach(function(t){
+  $("#rcDrop").addEventListener(t, function(e){
+    e.preventDefault(); e.stopPropagation();
+    this.classList.remove("over");
+  });
+});
+$("#rcDrop").addEventListener("drop", function(e){
+  var imgs = imagesFrom(e.dataTransfer);
+  if(!imgs.length){ toast("사진 파일만 됩니다"); return; }
+  rcTakeImages(imgs);
+});
+/* 붙여넣기 칸을 눌러도 파일 고르기가 열리게 */
+$("#rcDrop").addEventListener("click", function(){ $("#rcFile").click(); });
+/* 창 밖으로 사진을 떨어뜨려 브라우저가 파일을 열어버리는 것을 막는다 */
+["dragover","drop"].forEach(function(t){
+  window.addEventListener(t, function(e){
+    if(e.target && e.target.id === "rcDrop") return;
+    e.preventDefault();
+  });
+});
 
 $("#rcFile").addEventListener("change", function(e){
   var fs = [].slice.call(e.target.files || []);
