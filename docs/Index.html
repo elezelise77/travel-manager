@@ -93,6 +93,22 @@ section[hidden]{display:none!important}
 .notice b{color:var(--ink)}
 .notice .btn{margin-left:auto}
 .notice.warn{background:var(--sunken);border-color:var(--line-2)}
+.rcbody{display:flex;flex-direction:column;gap:14px;padding:4px 0}
+.rcitems{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.rcitem{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-top:1px solid var(--line);cursor:pointer}
+.rcitem:first-child{border-top:0}
+.rcitem input{margin:3px 0 0;width:16px;height:16px;flex:0 0 auto}
+.rcitem .nm{flex:1;min-width:0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.rcitem .amt{font-family:"IBM Plex Mono",monospace;font-size:13px;white-space:nowrap}
+.rcitem:has(input:checked){background:var(--accent-soft)}
+.rcsum{display:flex;align-items:baseline;gap:8px;justify-content:flex-end;font-size:14px}
+.rcsum b{font-family:"IBM Plex Mono",monospace;font-size:18px;color:var(--accent-ink)}
+.rcway{border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:var(--sunken)}
+.rcway b{display:block;margin-bottom:4px}
+.rcway textarea{width:100%;margin:9px 0;font-size:13px;line-height:1.6}
+.rcway .btn{margin-top:4px}
+.rcbusy{font-size:13px;color:var(--accent-ink);min-height:18px}
+.rcq{font-size:12px;color:var(--warm);margin-top:6px}
 .pickbox{display:flex;flex-wrap:wrap;gap:7px;padding:10px;border:1px solid var(--line);
   border-radius:10px;background:var(--sunken);max-height:168px;overflow:auto}
 .pick{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
@@ -231,9 +247,11 @@ details.det > summary::-webkit-details-marker{display:none}
 details.det > summary::after{content:"▾";margin-left:auto;color:var(--ink-3);font-size:11px}
 details.det[open] > summary::after{content:"▴"}
 
-.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1px;background:var(--line)}
-.mcard{background:var(--surface);padding:12px 14px;display:flex;gap:10px;align-items:center}
-.mcard .who{flex:1;min-width:0}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1px;background:var(--line)}
+.mcard{background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.mcard .who{min-width:0}
+.mcard .macts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mcard .macts .btn{margin-left:0}
 .mcard .who b{font-weight:600}
 .mcard .who div{font-size:12px;color:var(--ink-2);overflow-wrap:anywhere}
 .rsvpbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-top:1px solid var(--line);background:var(--sunken)}
@@ -389,7 +407,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
       <div class="err" id="loginErr"></div>
       <button class="btn primary block" type="submit">들어가기</button>
     </form>
-    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.2.0</span></div>
+    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.4.0</span></div>
   </div>
 </div>
 
@@ -513,7 +531,11 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
   <!-- 지출대장 -->
   <section id="sec-expense" hidden>
     <div class="sechead"><h2>지출대장</h2><p>등록한 사람만 고칠 수 있습니다</p>
-      <div class="actions"><button class="btn primary" id="addExpense">＋ 지출 추가</button></div></div>
+      <div class="actions">
+        <button class="btn" id="addByReceipt">📷 영수증으로 추가</button>
+        <button class="btn primary" id="addExpense">＋ 지출 추가</button>
+        <input type="file" id="rcFile" accept="image/*" multiple hidden>
+      </div></div>
     <div class="notice" id="expClosedNotice" hidden></div>
     <div class="panel" style="overflow:hidden">
       <div class="scroll" id="expTable"><table>
@@ -673,11 +695,43 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
     </div>
 
     <div class="sm muted" style="text-align:center;margin-top:20px">
-      화면 <span class="mono" id="uiVer">2.2.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
+      화면 <span class="mono" id="uiVer">2.4.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
     </div>
   </section>
 </main>
 </div>
+
+<dialog id="rcItemDlg"><h3>넣을 품목 고르기</h3>
+  <div class="rcbody">
+    <div class="sm muted" id="rcItemLead">여행에 쓴 것만 골라주세요. 고른 금액만 더해서 지출로 넣습니다.</div>
+    <div class="rcitems" id="rcItemList"></div>
+    <div class="rcsum">고른 금액 <b id="rcItemSum">₩0</b> <span class="sm muted" id="rcItemCnt"></span></div>
+  </div>
+  <div class="dlgfoot">
+    <button class="btn" id="rcItemAll" type="button">전체 선택</button>
+    <button class="btn" id="rcItemCancel" type="button">취소</button>
+    <button class="btn primary" id="rcItemOk" type="button">다음</button>
+  </div>
+</dialog>
+
+<dialog id="rcDlg"><h3>영수증으로 지출 넣기</h3>
+  <div class="rcbody">
+    <div class="rcway">
+      <b>① 사진으로</b>
+      <div class="sm muted">종이 영수증을 찍거나 화면을 캡처한 사진을 고르세요. 여러 장도 됩니다.</div>
+      <button class="btn primary" id="rcPick" type="button">사진 고르기</button>
+    </div>
+    <div class="rcway">
+      <b>② 글자로 붙여넣기</b>
+      <div class="sm muted">웹 영수증, 주문 내역, 카드 결제 문자를 그대로 복사해 붙여넣으세요.
+        사진 인식보다 정확합니다.</div>
+      <textarea id="rcText" rows="7" placeholder="예)&#10;국민체크카드승인 32,500원&#10;11/14 20:15&#10;GS25대부도점"></textarea>
+      <button class="btn primary" id="rcRead" type="button">읽기</button>
+    </div>
+    <div class="sm muted">읽은 내용은 바로 저장되지 않습니다. 확인하고 고친 뒤 저장하시면 됩니다.</div>
+  </div>
+  <div class="dlgfoot"><button class="btn" id="rcClose" type="button">닫기</button></div>
+</dialog>
 
 <dialog id="dlg"><h3 id="dlgTitle">입력</h3>
   <form method="dialog" id="dlgForm">
@@ -766,7 +820,8 @@ function adopt(raw){
     reason:r["사유"]||"", amount:Number(String(r["금액"]).replace(/[^0-9.-]/g,""))||0,
     note:r["비고"]||"", status:String(r["지불현황"]||"미지불").trim(),
     excluded:yes(r["정산제외"]), owner:String(r["등록자"]||"").trim(),
-    with:String(r["참여자"]||"").split(",").map(function(x){return x.trim()}).filter(Boolean)}});
+    with:String(r["참여자"]||"").split(",").map(function(x){return x.trim()}).filter(Boolean),
+    receipt:String(r["영수증"]||"").trim()}});
   S.plans=(raw.plans||[]).map(function(r){return {
     row:r._row, date:String(r["날짜"]||"").slice(0,10), time:String(r["시간"]||"").slice(0,5),
     title:r["내용"]||"", place:r["장소"]||"", memo:r["메모"]||""}});
@@ -1199,6 +1254,114 @@ function openPayForm(from, to, amount){
   });
 }
 
+/* 지출 입력창. pre 를 주면 영수증에서 읽은 값이 미리 채워진다. */
+/* ================= 영수증으로 지출 넣기 =================
+ * 사진은 구글 드라이브 글자 인식으로, 붙여넣은 글자는 그대로 읽습니다.
+ * 읽은 값은 입력창에 미리 채워질 뿐이고, 저장은 사람이 눌러야 됩니다. */
+var RCQ = [];                       // 아직 안 읽은 사진들
+
+function rcOpen(){
+  $("#rcText").value = "";
+  $("#rcDlg").showModal();
+}
+function rcBusy(msg){
+  var el = $("#rcBusyLine");
+  if(el) el.textContent = msg || "";
+}
+var RCR = null;                     // 지금 읽은 영수증
+
+function rcDone(r){
+  $("#rcDlg").close();
+  RCR = r || {};
+  /* 쿠팡 주문처럼 품목이 여러 개면 무엇을 넣을지 먼저 고른다 */
+  if(RCR.품목 && RCR.품목.length >= 2){ rcItemsOpen(); return; }
+  if(!RCR.금액) toast("금액을 못 찾았습니다 — 직접 넣어주세요");
+  else toast("읽었습니다 — 확인하고 저장해 주세요" + (RCQ.length ? " (남은 영수증 "+RCQ.length+"장)" : ""));
+  openExpenseForm(null, RCR);
+}
+
+/* ---------- 품목 고르기 (여러 품목 주문) ---------- */
+function rcItemsOpen(){
+  var its = RCR.품목 || [];
+  $("#rcItemLead").textContent =
+    (RCR.사유 ? RCR.사유+" 주문 " : "") + its.length + "개 품목입니다. 여행에 쓴 것만 골라주세요.";
+  $("#rcItemList").innerHTML = its.map(function(it,i){
+    return '<label class="rcitem"><input type="checkbox" data-i="'+i+'" checked>'+
+      '<span class="nm">'+esc(it.이름)+(it.수량>1?' <span class="muted">×'+it.수량+'</span>':'')+'</span>'+
+      '<span class="amt">'+won(it.금액)+'</span></label>';
+  }).join("");
+  rcItemSum();
+  $("#rcItemDlg").showModal();
+}
+function rcPicked(){
+  var its = RCR.품목 || [], out = [];
+  [].slice.call($("#rcItemList").querySelectorAll("input:checked")).forEach(function(c){
+    var it = its[Number(c.dataset.i)];
+    if(it) out.push(it);
+  });
+  return out;
+}
+function rcItemSum(){
+  var picked = rcPicked(), sum = 0;
+  picked.forEach(function(it){ sum += it.금액; });
+  $("#rcItemSum").textContent = won(sum);
+  $("#rcItemCnt").textContent = picked.length + " / " + (RCR.품목||[]).length + "개";
+  return sum;
+}
+function rcFail(er){
+  busy(false); rcBusy("");
+  var m = er && er.message ? er.message : "읽지 못했습니다";
+  if(m.indexOf("Drive API") >= 0 || m.indexOf("글자 인식") >= 0){
+    alert(m);                       // 설정 안내는 길어서 알림창으로
+  }else toast(m);
+  RCQ = [];
+}
+
+/* 큐에서 한 장씩 */
+function rcNext(){
+  if(!RCQ.length) return;
+  var file = RCQ.shift();
+  busy(true, "영수증 읽는 중… (남은 " + (RCQ.length+1) + "장)");
+  shrinkPhoto(file, 1600, 0.85).then(function(dataUrl){
+    google.script.run
+      .withSuccessHandler(function(r){ busy(false); rcDone(r); })
+      .withFailureHandler(rcFail)
+      .readReceiptImage(TOKEN, "image/jpeg", dataUrl.split(",")[1]);
+  }, function(){ busy(false); toast("사진을 읽지 못했습니다"); rcNext(); });
+}
+
+function openExpenseForm(ex, pre){
+  pre = pre || {};
+  var payerField = isAdmin()
+    ? {key:"결제자",label:"결제자",type:"select",options:[""].concat(memberNames()),value:ex?ex.payer:ME}
+    : {key:"결제자",label:"결제자",type:"select",options:[ME],value:ME,disabled:true,hint:"본인 결제 건만 등록할 수 있습니다"};
+  var title = ex ? "지출 수정" : (pre.영수증||pre.원문 ? "영수증 확인 후 저장" : "지출 추가");
+  var note  = ex ? ex.note : (pre.비고 || "");
+  openForm(title,[
+    payerField,
+    {key:"카드",label:"결제수단",value:ex?ex.method:(pre.카드||""),placeholder:"KB 신용 / 현금"},
+    {key:"사유",label:"사유",value:ex?ex.reason:(pre.사유||""),placeholder:"숙소예약"},
+    {key:"금액",label:"금액 (원)",type:"number",value:ex?ex.amount:(pre.금액||""),
+     hint:(!ex&&pre.금액)?"영수증에서 읽은 금액입니다. 꼭 확인해 주세요.":""},
+    {key:"비고",label:"비고",wide:true,value:note},
+    {key:"지불현황",label:"지불현황",type:"select",options:["미지불","완료","완료(취소가능)","취소"],
+     value:ex?ex.status:(pre.금액?"완료":"미지불")},
+    {key:"참여자",label:"이 지출을 나눌 사람",type:"people",wide:true,
+     options:memberNames(),value:ex?ex.with:[],
+     hint:"아무도 고르지 않으면 참석자 전원이 나눕니다. 일부만 먹거나 탄 비용이면 그 사람들만 골라주세요."},
+    {key:"정산제외",label:"정산에서 제외",type:"checkbox",value:ex?ex.excluded:false}
+  ],function(v){
+    if(!isAdmin()) v["결제자"]=ME;
+    v["금액"]=Number(v["금액"])||0;
+    v["참여자"]=(v["참여자"]||[]).join(", ");
+    v["정산제외"]=v["정산제외"]?"O":"";
+    v["영수증"]=ex?(ex.receipt||""):(pre.영수증||"");
+    if(ex) v._row=ex.row;
+    call("saveExpense",[TOKEN,v],"저장했습니다");
+    if(!ex && RCQ.length) setTimeout(rcNext, 900);      // 여러 장 올렸으면 다음 장으로
+  }, ex?function(){call("deleteExpense",[TOKEN,ex.row],"삭제했습니다")}:null);
+}
+
 function canEditExpense(e){ return !isClosed() && (isAdmin() || (e.owner && e.owner===ME)) }
 function renderExpenses(){
   var rows=S.expenses.slice().sort(function(a,b){return a.no-b.no});
@@ -1228,7 +1391,8 @@ function renderExpenses(){
       '<td class="r mono">'+won(e.amount)+'</td><td class="sm">'+esc(e.note)+'</td>'+
       '<td><span class="chip '+chipOf(st)+'">'+esc(st)+'</span></td>'+
       '<td class="sm muted">'+esc(e.owner||"—")+
-        (withOf(e)?'<div class="sm" style="color:var(--accent-ink)">'+esc(withOf(e))+'</div>':'')+'</td>'+
+        (withOf(e)?'<div class="sm" style="color:var(--accent-ink)">'+esc(withOf(e))+'</div>':'')+
+        (e.receipt?'<div><a class="sm" href="'+esc(e.receipt)+'" target="_blank" rel="noopener">📷 영수증</a></div>':'')+'</td>'+
       '<td class="r">'+(canEditExpense(e)?'<button class="btn tiny" data-edit-exp="'+e.row+'">수정</button>':'')+'</td></tr>'
   }).join("");
 
@@ -1244,7 +1408,8 @@ function renderExpenses(){
       (e.note?'<div class="enote">'+esc(e.note)+'</div>':'')+
       (withOf(e)?'<div class="enote" style="color:var(--accent-ink)">'+esc(withOf(e))+'</div>':'')+
       '<div class="efoot"><span class="who">'+(e.no?("NO."+e.no+" · "):"")+
-        '등록 '+esc(e.owner||"—")+(e.excluded?" · 정산 제외":"")+'</span>'+
+        '등록 '+esc(e.owner||"—")+(e.excluded?" · 정산 제외":"")+
+        (e.receipt?' · <a href="'+esc(e.receipt)+'" target="_blank" rel="noopener">📷 영수증</a>':'')+'</span>'+
         (canEditExpense(e)?'<button class="btn tiny" data-edit-exp="'+e.row+'">수정</button>':'')+
       '</div></div>'
   }).join("");
@@ -1343,9 +1508,14 @@ function renderMembers(){
       (m.role==="admin"?' <span class="chip">관리자</span>':'')+
       '<div>'+esc(m.region||"")+(m.alt?" · 출발 "+esc(m.alt):"")+
       (m.acct?" · 계좌 등록됨":"")+
-      (isAdmin()&&!m.pwSet?' · <span style="color:var(--warm)">기본 비밀번호</span>':'')+'</div></div>'+
+      (isAdmin()?(m.pwSet?' · <span class="muted">본인이 정한 비밀번호</span>'
+                         :' · <span style="color:var(--warm)">기본 비밀번호 쓰는 중</span>'):'')+'</div></div>'+
+      '<div class="macts">'+
       (m.rsvp&&cls[m.rsvp]?'<span class="chip '+cls[m.rsvp]+'">'+esc(m.rsvp)+'</span>':'')+
-      (isAdmin()?'<button class="btn tiny" data-edit-mem="'+m.row+'">수정</button>':'')+'</div>'}).join("");
+      (isAdmin()&&m.pwSet&&m.name!==ME
+        ?'<button class="btn tiny" data-reset-pw="'+m.row+'" data-nm="'+esc(m.name)+'">비번 초기화</button>':'')+
+      (isAdmin()?'<button class="btn tiny" data-edit-mem="'+m.row+'">수정</button>':'')+
+      '</div></div>'}).join("");
   var sel=$("#rsvpWho");
   sel.innerHTML=S.members.map(function(m){
     return '<option value="'+esc(m.name)+'"'+(m.name===ME?" selected":"")+'>'+esc(m.name)+'</option>'}).join("");
@@ -1712,30 +1882,48 @@ document.addEventListener("click",function(e){
     return;
   }
 
+  if(t.id==="rcItemCancel"){ $("#rcItemDlg").close(); RCQ=[]; return; }
+  if(t.id==="rcItemAll"){
+    var box = $("#rcItemList");
+    var any = box.querySelector("input:checked");
+    [].slice.call(box.querySelectorAll("input")).forEach(function(c){ c.checked = !any });
+    t.textContent = any ? "전체 선택" : "전체 해제";
+    rcItemSum();
+    return;
+  }
+  if(t.id==="rcItemOk"){
+    var picked = rcPicked();
+    if(!picked.length){ toast("품목을 하나 이상 골라주세요"); return; }
+    var sum = 0, names = [];
+    picked.forEach(function(it){ sum += it.금액; names.push(it.이름); });
+    $("#rcItemDlg").close();
+    var pre = {
+      사유 : RCR.사유 || "장보기",
+      금액 : sum,
+      카드 : RCR.카드 || "",
+      날짜 : RCR.날짜 || "",
+      영수증: RCR.영수증 || "",
+      비고 : names.slice(0,6).join(", ") + (names.length>6 ? " 외 "+(names.length-6)+"건" : "")
+    };
+    toast(picked.length+"개 골랐습니다 — 확인하고 저장해 주세요");
+    openExpenseForm(null, pre);
+    return;
+  }
+  if(t.id==="addByReceipt"){ rcOpen(); return; }
+  if(t.id==="rcClose"){ $("#rcDlg").close(); return; }
+  if(t.id==="rcPick"){ $("#rcFile").click(); return; }
+  if(t.id==="rcRead"){
+    var txt = $("#rcText").value.trim();
+    if(!txt){ toast("영수증 내용을 붙여넣어 주세요"); return; }
+    busy(true, "읽는 중…");
+    google.script.run
+      .withSuccessHandler(function(r){ busy(false); rcDone(r); })
+      .withFailureHandler(rcFail)
+      .readReceiptText(TOKEN, txt);
+    return;
+  }
   if(t.id==="addExpense"||(row=t.dataset.editExp)){
-    var ex=row?byRow(S.expenses,row):null;
-    var payerField = isAdmin()
-      ? {key:"결제자",label:"결제자",type:"select",options:[""].concat(memberNames()),value:ex?ex.payer:ME}
-      : {key:"결제자",label:"결제자",type:"select",options:[ME],value:ME,disabled:true,hint:"본인 결제 건만 등록할 수 있습니다"};
-    openForm(ex?"지출 수정":"지출 추가",[
-      payerField,
-      {key:"카드",label:"결제수단",value:ex?ex.method:"",placeholder:"KB 신용 / 현금"},
-      {key:"사유",label:"사유",value:ex?ex.reason:"",placeholder:"숙소예약"},
-      {key:"금액",label:"금액 (원)",type:"number",value:ex?ex.amount:""},
-      {key:"비고",label:"비고",wide:true,value:ex?ex.note:""},
-      {key:"지불현황",label:"지불현황",type:"select",options:["미지불","완료","완료(취소가능)","취소"],value:ex?ex.status:"미지불"},
-      {key:"참여자",label:"이 지출을 나눌 사람",type:"people",wide:true,
-       options:memberNames(),value:ex?ex.with:[],
-       hint:"아무도 고르지 않으면 참석자 전원이 나눕니다. 일부만 먹거나 탄 비용이면 그 사람들만 골라주세요."},
-      {key:"정산제외",label:"정산에서 제외",type:"checkbox",value:ex?ex.excluded:false}
-    ],function(v){
-      if(!isAdmin()) v["결제자"]=ME;
-      v["금액"]=Number(v["금액"])||0;
-      v["참여자"]=(v["참여자"]||[]).join(", ");
-      v["정산제외"]=v["정산제외"]?"O":"";
-      if(ex) v._row=ex.row;
-      call("saveExpense",[TOKEN,v],"저장했습니다");
-    }, ex?function(){call("deleteExpense",[TOKEN,ex.row],"삭제했습니다")}:null);
+    openExpenseForm(row?byRow(S.expenses,row):null, null);
     return;
   }
 
@@ -1803,6 +1991,16 @@ document.addEventListener("click",function(e){
     return;
   }
 
+  if((row=t.dataset.resetPw)){
+    var nm = t.dataset.nm || "이 사람";
+    var def = String(S.meta["기본비밀번호"]||"0000");
+    if(!confirm(nm+"님의 비밀번호를 지울까요?\n\n"+
+                "지운 뒤에는 기본 비밀번호 ["+def+"] 로 들어올 수 있습니다.\n"+
+                "들어온 뒤 설정 탭에서 새 비밀번호를 정하면 됩니다.\n\n"+
+                "※ 지금 비밀번호가 무엇인지는 아무도 볼 수 없습니다. 지우는 것만 됩니다.")) return;
+    call("resetPassword",[TOKEN,row], nm+"님 비밀번호를 초기화했습니다 — 기본 비밀번호 "+def+" 로 알려주세요");
+    return;
+  }
   if(t.id==="addMember"||(row=t.dataset.editMem)){
     var m2=row?byRow(S.members,row):null;
     openForm(m2?"인원 수정":"인원 추가",[
@@ -1915,6 +2113,17 @@ $("#bkFile").addEventListener("change", function(e){
     }).withFailureHandler(function(er){busy(false);fail(er)}).restoreAll(TOKEN,dump);
   };
   rd.readAsText(f);
+});
+
+$("#rcItemList").addEventListener("change", function(){ rcItemSum(); });
+
+$("#rcFile").addEventListener("change", function(e){
+  var fs = [].slice.call(e.target.files || []);
+  e.target.value = "";
+  if(!fs.length) return;
+  RCQ = fs.slice(0, 10);                       // 한 번에 10장까지
+  $("#rcDlg").close();
+  rcNext();
 });
 
 $("#photoFile").addEventListener("change", function(e){
