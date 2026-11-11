@@ -2,7 +2,7 @@
 ==================================================
 
 준비물: 깃허브 로그인된 브라우저 (크롬 또는 엣지)
-올릴 파일: C:\Users\user\Travel-Manager\github-upload   ← 이 폴더 안의 것만 올립니다
+올릴 파일: C:\Users\kdhda\Travel-Manager\github-upload   ← 이 폴더 안의 것만 올립니다
 
   ※ Travel-Manager 폴더를 통째로 올리면 안 됩니다.
     그 안의 node_modules 에 파일이 수천 개라 업로드가 멈춥니다.
@@ -41,7 +41,7 @@
 
 파일 목록이 다 올라가면 아래로 내려서
 
-  Commit changes 칸 : 첫 업로드 v2.1.0
+  Commit changes 칸 : 첫 업로드 v2.5.0
   [Commit changes]
 
 
@@ -60,6 +60,9 @@
 
 docs 를 눌러 안에 Index.html 이 있는지 꼭 확인하세요.
 (자동 업데이트가 여기서 화면을 받아갑니다)
+
+  ※ Index.html 을 저장소 맨 바깥(루트)에 올리면 안 됩니다.
+    Pages 는 docs 폴더만 내보냅니다. 반드시 docs 안에 넣으세요.
 
 
 4단계. Pages 켜기 (화면 자동 업데이트)
