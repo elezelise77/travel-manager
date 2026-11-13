@@ -412,7 +412,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
       <div class="err" id="loginErr"></div>
       <button class="btn primary block" type="submit">들어가기</button>
     </form>
-    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.5.0</span></div>
+    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.6.0</span></div>
   </div>
 </div>
 
@@ -524,6 +524,12 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
         <tbody id="balBody"></tbody>
       </table></div>
       <div class="elist"><div id="balCards"></div></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="h"><h3>감면</h3>
+        <button class="btn tiny adminonly" id="discAdd" hidden>＋ 감면 추가</button></div>
+      <div id="discList"></div>
     </div>
 
     <div class="card" style="margin-top:14px">
@@ -700,7 +706,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
     </div>
 
     <div class="sm muted" style="text-align:center;margin-top:20px">
-      화면 <span class="mono" id="uiVer">2.5.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
+      화면 <span class="mono" id="uiVer">2.6.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
     </div>
   </section>
 </main>
@@ -779,7 +785,8 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
 
 <script>
 var BOOT = <?!= boot ?>;
-var S = {meta:{},members:[],expenses:[],plans:[],meals:[],moves:[],stays:[],photos:[],ideas:[],pays:[]};
+var S = {meta:{},members:[],expenses:[],plans:[],meals:[],moves:[],stays:[],photos:[],ideas:[],pays:[],discounts:[]};
+var DISC_SHEET="감면", DISC_COLS=["사유","대상자","1인당금액","부담자","비고","등록자"], DISC_LOADED=false;
 var TOKEN="", ME="", ROLE="member", MUSTSET=false;
 var DATE_MIN="2020-01-01", DATE_MAX="2099-12-31";
 var SLOTS=["아침","점심","저녁","간식","기타"];
@@ -865,6 +872,52 @@ function call(fn,args,okMsg){
     .withFailureHandler(function(e){busy(false);fail(e)})
     [fn].apply(null,args);
 }
+/* ---------- 감면 (운전 수고비·레크레이션 상품 등) ----------
+ * 지출대장을 건드리지 않고, 특정 사람의 부담금만 정액으로 깎아준다.
+ * 깎인 만큼은 부담할 사람들이 나눠 낸다. 그래서 잔액 합계는 그대로 0이다.
+ * '감면' 시트에 담고 범용 창구 api() 로 읽고 쓴다 — 서버 코드는 손대지 않는다. */
+function namesIn(v){
+  return String(v||"").split(/[,\s]+/).map(function(x){return x.trim()}).filter(Boolean);
+}
+function loadDiscounts(always, done){
+  if(DISC_LOADED && !always){ if(done) done(); return; }
+  google.script.run
+    .withSuccessHandler(function(rows){
+      DISC_LOADED=true;
+      S.discounts=(rows||[]).map(function(r){return {
+        row:r._row, why:String(r["사유"]||"").trim(),
+        targets:namesIn(r["대상자"]), amount:Number(r["1인당금액"])||0,
+        payers:namesIn(r["부담자"]), note:String(r["비고"]||"").trim(),
+        by:String(r["등록자"]||"").trim()}})
+        .filter(function(d){return d.amount>0 && d.targets.length});
+      renderAll();
+      if(done) done();
+    })
+    .withFailureHandler(function(){        // 시트가 아직 없으면 감면이 없는 것으로 본다
+      DISC_LOADED=true; S.discounts=[]; if(done) done();
+    })
+    .api(TOKEN,"list",[DISC_SHEET]);
+}
+function saveDiscount(row, obj, okMsg){
+  busy(true);
+  google.script.run
+    .withSuccessHandler(function(){
+      google.script.run
+        .withSuccessHandler(function(){ busy(false); toast(okMsg); loadDiscounts(true); })
+        .withFailureHandler(function(er){busy(false);fail(er)})
+        .api(TOKEN,"put",[DISC_SHEET,row,obj]);
+    })
+    .withFailureHandler(function(er){busy(false);fail(er)})
+    .api(TOKEN,"ensure",[DISC_SHEET,DISC_COLS]);
+}
+function removeDiscount(row){
+  busy(true);
+  google.script.run
+    .withSuccessHandler(function(){ busy(false); toast("감면을 지웠습니다"); loadDiscounts(true); })
+    .withFailureHandler(function(er){busy(false);fail(er)})
+    .api(TOKEN,"del",[DISC_SHEET,row]);
+}
+
 function fail(e){
   var m = e&&e.message?e.message:"처리하지 못했습니다";
   toast(m);
@@ -932,6 +985,24 @@ function calc(){
     p.forEach(ensure);
     splitAmong(e.amount, p, who);
   });
+  /* 감면 — 대상자의 몫을 정액으로 깎고, 깎인 총액을 부담할 사람들이 나눈다.
+   * 빠진 금액과 더한 금액이 정확히 같아서 잔액 합계는 0 그대로다. */
+  var discTotal=0, discLines=[];
+  (S.discounts||[]).forEach(function(d){
+    if(!(d.amount>0)) return;
+    var tg=d.targets.filter(function(nm){return names.indexOf(nm)>=0});
+    if(!tg.length){ discLines.push({d:d, skip:"대상자가 정산 인원에 없습니다"}); return; }
+    var pay=d.payers.filter(function(nm){return names.indexOf(nm)>=0 && tg.indexOf(nm)<0});
+    if(!d.payers.length) pay=names.filter(function(nm){return tg.indexOf(nm)<0});
+    if(!pay.length){ discLines.push({d:d, skip:"부담할 사람이 없습니다"}); return; }
+    var sum=d.amount*tg.length;
+    tg.forEach(function(nm){ ensure(nm).share -= d.amount; });
+    pay.forEach(ensure);
+    splitAmong(sum, pay, who);
+    discTotal += sum;
+    discLines.push({d:d, targets:tg, payers:pay, sum:sum, each:Math.round(sum/pay.length)});
+  });
+
   var share=Math.round(total/n);   // 대표값 (전원 균등일 때의 1인당 금액)
 
   list.forEach(function(e){ ensure(e.payer||"(미지정)").paid += e.amount; });
@@ -952,7 +1023,8 @@ function calc(){
   var out=all.filter(function(m){return !joins(m)}).length;
   var wait=all.filter(function(m){return isWait(m)}).length;
   return {total:total, n:names.length, share:share, bal:bal, count:list.length,
-          sentTotal:sentTotal, nAll:all.length, nOut:out, nWait:wait, partial:partial};
+          sentTotal:sentTotal, nAll:all.length, nOut:out, nWait:wait, partial:partial,
+          disc:discTotal, discLines:discLines};
 }
 
 /* 인원이 이렇게 바뀌면 1인당 얼마가 되는지 (미리보기용) */
@@ -1021,10 +1093,13 @@ function renderDash(){
   $("#heroDday").innerHTML=dd; $("#heroDdayCap").textContent=cap;
 
   var mine=myState(), side="";
-  if(c.partial){
+  if(c.partial || c.disc){
+    var tbits=["총 "+won(c.total)];
+    if(c.partial) tbits.push(c.partial+"건은 고른 사람끼리만 나눔");
+    if(c.disc)    tbits.push("감면 "+won(c.disc));
     $("#perHeadTopLbl").textContent="내 부담금";
     $("#perHeadTop").textContent=won(mine.share);
-    $("#perHeadTopSub").textContent="총 "+won(c.total)+" · "+c.partial+"건은 고른 사람끼리만 나눔";
+    $("#perHeadTopSub").textContent=tbits.join(" · ");
   }else{
     $("#perHeadTopLbl").textContent="1인당 부담금 (참석자 N분의 1)";
     $("#perHeadTop").textContent=won(c.share);
@@ -1127,11 +1202,14 @@ function transfers(bal){
 function renderSettle(){
   var c=calc(), t=transfers(c.bal), me=myState();
 
-  if(c.partial){
-    /* 항목마다 나눈 사람이 달라 '1인당'이 하나로 안 나온다 — 내 부담금을 보여준다 */
+  if(c.partial || c.disc){
+    /* 항목마다 나눈 사람이 다르거나 감면이 있으면 '1인당'이 하나로 안 나온다 — 내 부담금을 보여준다 */
+    var bits=["총 "+won(c.total)];
+    if(c.partial) bits.push(c.partial+"건은 고른 사람끼리만 나눔");
+    if(c.disc)    bits.push("감면 "+won(c.disc));
     $("#perHeadLbl").textContent="내 부담금";
     $("#perHead").textContent=won(me.share);
-    $("#perHeadNote").textContent="총 "+won(c.total)+" · "+c.partial+"건은 고른 사람끼리만 나눔";
+    $("#perHeadNote").textContent=bits.join(" · ");
   }else{
     $("#perHeadLbl").textContent="한 사람당 부담금";
     $("#perHead").textContent=won(c.share);
@@ -1224,6 +1302,25 @@ function renderSettle(){
       (b.sent?'<span class="muted">· 보냄 '+won(b.sent)+'</span>':'')+
       (b.recv?'<span class="muted">· 받음 '+won(b.recv)+'</span>':'')+
       '</div></div>'}).join("");
+
+  // 감면
+  $("#discList").innerHTML = c.discLines.length ? c.discLines.map(function(x){
+    var d=x.d, mine=d.targets.indexOf(ME)>=0;
+    if(x.skip) return '<div class="transfer"><div class="top">'+
+      '<span class="nm"><b>'+esc(d.why||"감면")+'</b> <span class="chip no">적용 안 됨</span></span>'+
+      '<span class="sm muted">'+esc(x.skip)+'</span>'+
+      (isAdmin()?'<button class="btn tiny" data-disc="'+d.row+'">고치기</button>':'')+'</div></div>';
+    return '<div class="transfer"><div class="top">'+
+      '<span class="nm"><b>'+esc(d.why||"감면")+'</b>'+(mine?' <span class="chip me">나</span>':'')+
+      ' <span class="arrow">→</span> '+esc(x.targets.join(", "))+'</span>'+
+      '<span class="mono">1인 '+won(d.amount)+'</span>'+
+      (isAdmin()?'<button class="btn tiny" data-disc="'+d.row+'">고치기</button>':'')+'</div>'+
+      '<div class="acct"><span class="muted">'+x.targets.length+'명 × '+won(d.amount)+
+      ' = '+won(x.sum)+' 을 나머지 '+x.payers.length+'명이 나눠 부담 (1인당 약 '+won(x.each)+')'+
+      (d.note?' · '+esc(d.note):'')+'</span></div></div>'}).join("")
+    : '<div class="empty">'+(isAdmin()
+        ? "운전 수고비, 레크레이션 상품처럼 특정 사람의 부담금을 깎아줄 때 씁니다. 깎인 만큼은 나머지가 나눠 냅니다."
+        : "감면 항목이 없습니다.")+'</div>';
 
   // 주고받은 내역
   var kindChip={"선납":"gold","환급":"wait","기타":""};
@@ -1729,18 +1826,46 @@ function openForm(title,fields,onSave,onDelete){
     });
     onSave(v); dlg.close();
   };
-  var pa=$("#dlgBody").querySelector("[data-pickall]");
-  if(pa) pa.onclick=function(){
-    var box=document.getElementById(this.dataset.pickall);
-    var any=box.querySelector("input:checked");
-    [].slice.call(box.querySelectorAll("input")).forEach(function(c){ c.checked=!any });
-    this.textContent = any ? "전원 선택" : "전원 해제";
-  };
+  /* 사람 고르는 칸이 두 개 이상일 수 있다 — 버튼마다 각자 짝을 찾아 묶는다 */
+  [].slice.call($("#dlgBody").querySelectorAll("[data-pickall]")).forEach(function(pa){
+    pa.onclick=function(){
+      var box=document.getElementById(this.dataset.pickall);
+      var any=box.querySelector("input:checked");
+      [].slice.call(box.querySelectorAll("input")).forEach(function(c){ c.checked=!any });
+      this.textContent = any ? "전원 선택" : "전원 해제";
+    };
+  });
   if(onDelete) $("#dlgDel").onclick=function(){ if(confirm("삭제할까요?")){onDelete();dlg.close()} };
   dlg.showModal();
 }
 function byRow(arr,row){return arr.filter(function(x){return String(x.row)===String(row)})[0]}
 function memberNames(){return S.members.map(function(m){return m.name})}
+
+/* 감면 추가·수정 (관리자) */
+function openDiscForm(d){
+  d = d || {row:0, why:"", targets:[], amount:"", payers:[], note:""};
+  openForm(d.row?"감면 고치기":"감면 추가",[
+    {key:"why",label:"사유",value:d.why,wide:true,
+     placeholder:"운전 수고비 (유류비·하이패스) / 레크레이션 1등"},
+    {key:"targets",label:"깎아줄 사람",type:"people",wide:true,
+     options:memberNames(),value:d.targets,
+     hint:"고른 사람마다 아래 금액만큼 부담금이 줄어듭니다"},
+    {key:"amount",label:"1인당 깎아줄 금액 (원)",type:"number",value:d.amount,
+     placeholder:"95000"},
+    {key:"payers",label:"부담할 사람 (비워두면 나머지 전원)",type:"people",wide:true,
+     options:memberNames(),value:d.payers,
+     hint:"깎아준 총액을 이 사람들이 나눠 냅니다. 비워두면 깎아준 사람을 뺀 참석자 전원이 나눕니다."},
+    {key:"note",label:"비고",value:d.note,wide:true}
+  ],function(v){
+    var amt=Math.round(Number(v.amount)||0);
+    if(!v.targets.length){ toast("깎아줄 사람을 한 명 이상 골라주세요"); return; }
+    if(amt<=0){ toast("금액을 넣어주세요"); return; }
+    saveDiscount(d.row,{
+      "사유":v.why||"감면", "대상자":v.targets.join(","), "1인당금액":amt,
+      "부담자":v.payers.join(","), "비고":v.note
+    }, d.row?"감면을 고쳤습니다":"감면을 추가했습니다");
+  }, d.row?function(){ removeDiscount(d.row) }:null);
+}
 function openPwForm(){
   openForm("비밀번호 변경",[
     {key:"o",label:"지금 비밀번호",type:"password",wide:true,value:""},
@@ -1775,6 +1900,8 @@ document.addEventListener("click",function(e){
     return;
   }
   if(t.id==="pwBtn"||t.id==="pwNoticeBtn"){ openPwForm(); return; }
+  if(t.id==="discAdd"){ openDiscForm(null); return; }
+  if(t.dataset.disc){ openDiscForm(byRow(S.discounts, t.dataset.disc)); return; }
   if(t.id==="copyUrl"){ toast(copyText($("#shareUrl").value)?"링크를 복사했습니다":"복사하지 못했습니다 — 주소를 길게 눌러 복사해 주세요"); return; }
   if(t.dataset.copyAcct){ toast(copyText(t.dataset.copyAcct)?"계좌를 복사했습니다":"복사하지 못했습니다"); return; }
 
@@ -2305,6 +2432,7 @@ function enterApp(res){
   store("tripToken",TOKEN);
   $("#login").hidden=true; $("#app").hidden=false;
   adopt(res.data);
+  loadDiscounts(true);          // 감면은 getData 에 실리지 않아 따로 불러온다
   if(res.firstAdmin) setTimeout(function(){
     toast("처음 들어오셨네요 — "+ME+"님이 이 여행의 관리자가 되었습니다");},600);
   else if(!isAdmin() && settleMode()==="여행후일괄" && !isClosed()) setTimeout(function(){
