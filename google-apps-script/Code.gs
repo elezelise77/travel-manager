@@ -3,11 +3,12 @@
  * 구글 시트 = DB / 이름+비밀번호 로그인
  *******************************************************/
 
-var APP_VERSION = '2.2.0';
+var APP_VERSION = '2.7.0';
 var TZ = 'Asia/Seoul';
 var TOKEN_HOURS = 24 * 14;
 var DEFAULT_MAX_PEOPLE = 40;
 var ACCESS_KEEP = 400;        // 접속기록 보관 행 수
+var DISCOUNT_SHEET = '감면';  // 부담금을 정액으로 깎아주는 항목 (화면에서 api() 로 만든다)
 
 /* ===== 화면 자동 업데이트 =====
  * 화면(Index.html)을 시트에 붙박아 두지 않고, 만든 곳에서 받아와 그립니다.
@@ -28,7 +29,7 @@ var UI_CHUNK = 30000;         // 캐시 한 칸에 담을 글자 수 (한글은 
 var SHEETS = {
   MEMBER  : { name:'참석자명단', headerRow:1, cols:['이름','거주지','출발지(대안)','참석여부','비밀번호','권한','은행','계좌번호'] },
   /* '참여자' — 비어 있으면 정산 대상자 전원, 이름을 쉼표로 적으면 그 사람들끼리만 나눈다 */
-  EXPENSE : { name:'지출대장',   headerRow:2, cols:['NO.','결제자','카드','사유','금액','비고','지불현황','정산제외','등록자','참여자'] },
+  EXPENSE : { name:'지출대장',   headerRow:2, cols:['NO.','결제자','카드','사유','금액','비고','지불현황','정산제외','등록자','참여자','영수증'] },
   PLAN    : { name:'일정',       headerRow:1, cols:['날짜','시간','내용','장소','메모'] },
   MEAL    : { name:'식사',       headerRow:1, cols:['날짜','구분','메뉴','장소','비고'] },
   MOVE    : { name:'이동수단',   headerRow:1, cols:['날짜','구분','팀','수단','차량/편명','운전자','탑승자','출발지','출발시각','도착지','비고'] },
@@ -50,6 +51,7 @@ var CONFIG_ROWS = [
   ['관리자이름', ''],
   ['최대인원',   DEFAULT_MAX_PEOPLE],
   ['사진폴더ID', ''],
+  ['영수증폴더ID',''],
   ['정산모드',   '수시정산'],     // 수시정산 | 여행후일괄
   ['지출마감',   ''],             // 비어 있으면 진행 중, 날짜시각이 있으면 마감
   ['미정포함',   '포함'],         // 참석 '미정'·무응답을 정산 인원에 넣을지 : 포함 | 제외
@@ -230,6 +232,14 @@ function backupAll(token){
       dump.sheets[def.name] = readSheet_(def);
     }
   });
+  /* 기본 시트 말고 나중에 만들어진 시트(감면 · api() 로 만든 것들)도 함께 담는다.
+   * 이게 빠지면 복원했을 때 감면이 통째로 사라진다. */
+  var base = baseSheetNames_();
+  ss_().getSheets().forEach(function(sh){
+    var n = sh.getName();
+    if(base.indexOf(n) >= 0 || dump.sheets[n]) return;
+    try{ dump.sheets[n] = readSheet_(userDef_(n)); }catch(e){}
+  });
   return dump;
 }
 
@@ -271,7 +281,7 @@ function 관리자지정(){
 function 개인자료비우기(){
   var ui = SpreadsheetApp.getUi();
   var r = ui.alert('내 자료 전부 비우기',
-    '참석자 명단·계좌·비밀번호·지출·일정·숙소·사진·건의사항·접속기록이\n' +
+    '참석자 명단·계좌·비밀번호·지출·일정·숙소·사진·건의사항·접속기록·감면이\n' +
     '모두 지워집니다. 되돌릴 수 없습니다.\n\n' +
     '이 시트를 다른 사람에게 넘기기 전에 쓰는 기능입니다.\n계속할까요?', ui.ButtonSet.OK_CANCEL);
   if(r !== ui.Button.OK) return;
@@ -279,8 +289,16 @@ function 개인자료비우기(){
   Object.keys(SHEETS).forEach(function(k){
     if(SHEETS[k].name !== SHEETS.CONFIG.name) clearSheet_(SHEETS[k]);
   });
+  /* 기본 시트가 아닌 것(감면 등)에도 이름이 남아 있다 — 같이 비운다 */
+  var base = baseSheetNames_();
+  ss_().getSheets().forEach(function(sh){
+    if(base.indexOf(sh.getName()) >= 0) return;
+    if(sh.getLastRow() > 1)
+      sh.getRange(2,1,sh.getLastRow()-1,Math.max(sh.getLastColumn(),1)).clearContent();
+  });
   setCfg_('여행이름','우리 여행');
-  ['출발일','종료일','장소','관리자이름','사진폴더ID','지출마감'].forEach(function(k){ setCfg_(k,''); });
+  ['출발일','종료일','장소','관리자이름','사진폴더ID','영수증폴더ID','지출마감']
+    .forEach(function(k){ setCfg_(k,''); });
   setCfg_('기본비밀번호','0000');
   setCfg_('정산모드','수시정산');
   setCfg_('미정포함','포함');
@@ -349,9 +367,10 @@ function 로그인점검(){
 }
 
 function 비밀번호전체초기화(){
-  var sh = ss_().getSheetByName(SHEETS.MEMBER.name);
+  var sh = ss_().getSheetByName(SHEETS.MEMBER.name), c = pwCol_();
   readSheet_(SHEETS.MEMBER).forEach(function(r){
-    if(String(r['이름']||'').trim()) sh.getRange(r._row,5).setValue(''); });
+    if(String(r['이름']||'').trim()) sh.getRange(r._row,c).setNumberFormat('@').setValue(''); });
+  invalidate_();
   SpreadsheetApp.getUi().alert('모두 기본비밀번호(' + (cfg_('기본비밀번호')||'0000') + ')로 돌아갔습니다.');
 }
 
@@ -552,7 +571,8 @@ function changeMyPassword(token, oldPw, newPw){
   if(!ok) throw new Error('지금 비밀번호가 맞지 않습니다.');
   var np = String(newPw||'').trim();
   if(np.length<4 || np.length>20) throw new Error('새 비밀번호는 4~20자로 정해주세요.');
-  ss_().getSheetByName(SHEETS.MEMBER.name).getRange(m._row,5).setNumberFormat('@').setValue(hash_(np));
+  ss_().getSheetByName(SHEETS.MEMBER.name).getRange(m._row,pwCol_()).setNumberFormat('@').setValue(hash_(np));
+  invalidate_();
   return true;
 }
 /** 관리자: 이 여행방의 기본 비밀번호를 바꿈 (아직 비번을 안 정한 사람에게 적용) */
@@ -570,9 +590,26 @@ function setDefaultPassword(token, pw){
   return getData(token);
 }
 
+/** 참석자명단에서 '비밀번호' 칸이 몇 번째인지 이름으로 찾는다 (열이 밀려도 안전) */
+function pwCol_(){
+  var sh = ss_().getSheetByName(SHEETS.MEMBER.name);
+  var w = Math.max(sh.getLastColumn(), 1);
+  var head = sh.getRange(SHEETS.MEMBER.headerRow,1,1,w).getValues()[0]
+               .map(function(h){ return String(h||'').trim(); });
+  var i = head.indexOf('비밀번호');
+  return i >= 0 ? i+1 : 5;
+}
+
+/** 관리자: 한 사람의 비밀번호만 지운다 → 그 사람은 기본 비밀번호로 다시 들어온다 */
 function resetPassword(token, row){
   needAdmin_(token);
-  ss_().getSheetByName(SHEETS.MEMBER.name).getRange(Number(row),5).setValue('');
+  var sh = ss_().getSheetByName(SHEETS.MEMBER.name);
+  var r = Number(row);
+  if(!(r > SHEETS.MEMBER.headerRow)) throw new Error('잘못된 대상입니다.');
+  var who = String(sh.getRange(r, 1).getValue()||'').trim();
+  if(!who) throw new Error('명단에 없는 사람입니다.');
+  sh.getRange(r, pwCol_()).setNumberFormat('@').setValue('');
+  invalidate_();
   return getData(token);
 }
 /** 본인 계좌 등록 */
@@ -811,6 +848,44 @@ function restoreAll(token, dump){
       if(out.length) sh.getRange(def.headerRow+1, 1, out.length, width).setValues(out);
       done.push(def.name + ' ' + out.length + '줄');
     });
+
+    /* 기본 시트가 아닌 것(감면 등) — 시트가 없으면 백업에 적힌 열로 새로 만든다 */
+    var base = baseSheetNames_();
+    Object.keys(dump.sheets).forEach(function(name){
+      if(base.indexOf(name) >= 0) return;
+      var rows = dump.sheets[name];
+      if(!rows || !rows.length) return;
+      var cols = [];
+      rows.forEach(function(r){
+        Object.keys(r).forEach(function(h){
+          if(h !== '_row' && cols.indexOf(h) < 0) cols.push(h);
+        });
+      });
+      if(!cols.length) return;
+      var sh2 = ss_().getSheetByName(name);
+      if(!sh2){
+        sh2 = ss_().insertSheet(name);
+        sh2.getRange(1,1,1,cols.length).setValues([cols]).setFontWeight('bold');
+        sh2.setFrozenRows(1);
+      }
+      var w2 = Math.max(sh2.getLastColumn(), cols.length);
+      var head2 = sh2.getRange(1,1,1,w2).getValues()[0]
+                     .map(function(h){ return String(h||'').trim(); });
+      cols.forEach(function(c){                       // 백업에만 있는 열은 뒤에 붙인다
+        if(head2.indexOf(c) >= 0) return;
+        var blank = head2.indexOf('');
+        if(blank >= 0) head2[blank] = c; else head2.push(c);
+      });
+      sh2.getRange(1,1,1,head2.length).setValues([head2]).setFontWeight('bold');
+      if(sh2.getLastRow() > 1)
+        sh2.getRange(2,1,sh2.getLastRow()-1,Math.max(sh2.getLastColumn(),1)).clearContent();
+      var out2 = rows.map(function(r){
+        return head2.map(function(h){ return (h && r.hasOwnProperty(h)) ? r[h] : ''; });
+      });
+      sh2.getRange(2,1,out2.length,head2.length).setValues(out2);
+      done.push(name + ' ' + out2.length + '줄');
+    });
+
     invalidate_();
     return { ok:true, restored:done, savedAt: dump.savedAt || '' };
   } finally { lock.releaseLock(); }
@@ -826,6 +901,11 @@ function resetForNextTrip(token, opt){
      SHEETS.MOVE, SHEETS.STAY, SHEETS.IDEA].forEach(clearSheet_);
     if(opt.photos)  clearSheet_(SHEETS.PHOTO);      // 시트에서만 지우고 드라이브 원본은 남긴다
     if(opt.access)  clearSheet_(SHEETS.ACCESS);
+
+    /* 감면(운전자 수고비 · 레크레이션 결과)은 여행마다 달라지므로 비운다 */
+    var dsc = ss_().getSheetByName(DISCOUNT_SHEET);
+    if(dsc && dsc.getLastRow() > 1)
+      dsc.getRange(2,1,dsc.getLastRow()-1,Math.max(dsc.getLastColumn(),1)).clearContent();
 
     /* 참석 여부는 다시 받아야 한다 */
     var sh = ss_().getSheetByName(SHEETS.MEMBER.name);
@@ -1064,6 +1144,258 @@ function deleteIdea(token,row){
 /* ===== 사진 업로드 (구글 드라이브) ===== */
 
 /** 사진을 담을 드라이브 폴더 (없으면 만들고 설정 시트에 기억) */
+/* ================= 영수증 읽기 =================
+ * 사진은 구글 드라이브의 글자 인식(OCR)으로, 웹 영수증·결제 문자는 글자 그대로 읽습니다.
+ * 읽은 결과는 '추천값'일 뿐이고, 저장은 사람이 확인 버튼을 눌러야 됩니다.
+ *
+ * ※ 사진 인식을 쓰려면 Apps Script 편집기 왼쪽 [서비스 +] 에서
+ *   'Drive API' 를 한 번 추가해야 합니다 (무료). 글자 붙여넣기는 그냥 됩니다.   */
+
+/* ===== 영수증 글자 → 지출 항목 =====
+ * 종이 영수증(사진 OCR), 웹 영수증, 카드 결제 문자를 모두 같은 규칙으로 읽는다.
+ * OCR 은 틀릴 수 있으므로 결과는 반드시 사람이 확인한 뒤 저장한다. */
+
+/* 금액으로 볼 수 없는 줄 (부가세·공급가액 등을 총액으로 잘못 읽지 않게) */
+var AMT_SKIP = /부가세|과세|면세|공급가|봉사료|할인|적립|포인트|잔액|거스름|받은돈|받은 돈|쿠폰|마일리지|누적/;
+/* 총액을 뜻하는 말 — 앞에 있을수록 우선 */
+var AMT_KEY = [
+  /총\s*결제\s*금액/, /결제\s*예정\s*금액/, /최종\s*결제\s*금액/,
+  /결제\s*금액/, /승인\s*금액/, /합계\s*금액/, /청구\s*금액/, /주문\s*금액/,
+  /받을\s*금액/, /총\s*금액/, /합\s*계/, /총\s*액/, /금\s*액/
+];
+
+function won_(s){
+  var m = String(s).replace(/[^\d,.\-]/g, '');
+  m = m.replace(/,/g, '');
+  var n = parseInt(m, 10);
+  return isNaN(n) ? 0 : n;
+}
+/* 한 줄에서 돈처럼 보이는 숫자들 */
+function numsIn_(line){
+  var out = [], re = /([0-9][0-9,]{2,})\s*원?/g, m;
+  while((m = re.exec(line))){
+    var v = won_(m[1]);
+    if(v >= 100 && v <= 100000000) out.push(v);
+  }
+  return out;
+}
+
+function pickAmount_(lines){
+  /* 1) 총액을 뜻하는 말이 있는 줄에서 찾는다 */
+  for(var k = 0; k < AMT_KEY.length; k++){
+    for(var i = lines.length - 1; i >= 0; i--){       // 영수증은 아래쪽이 총액
+      var L = lines[i];
+      if(AMT_SKIP.test(L)) continue;
+      if(!AMT_KEY[k].test(L)) continue;
+      var ns = numsIn_(L);
+      if(ns.length) return ns[ns.length - 1];
+      var nx = lines[i+1] ? numsIn_(lines[i+1]) : [];  // 값이 다음 줄에 있는 경우
+      if(nx.length) return nx[0];
+    }
+  }
+  /* 2) 못 찾으면 가장 큰 금액 */
+  var all = [];
+  lines.forEach(function(L){ if(!AMT_SKIP.test(L)) all = all.concat(numsIn_(L)); });
+  if(!all.length) return 0;
+  return Math.max.apply(null, all);
+}
+
+function pad2_(n){ return (n < 10 ? '0' : '') + n; }
+function pickDate_(text){
+  var m = text.match(/(20\d{2})\s*[-.\/년]\s*(\d{1,2})\s*[-.\/월]\s*(\d{1,2})/);
+  if(m) return m[1] + '-' + pad2_(+m[2]) + '-' + pad2_(+m[3]);
+  m = text.match(/(\d{2})\s*[-.\/]\s*(\d{1,2})\s*[-.\/]\s*(\d{1,2})/);   // 25.11.09
+  if(m && +m[1] >= 20 && +m[1] <= 99) return '20' + m[1] + '-' + pad2_(+m[2]) + '-' + pad2_(+m[3]);
+  m = text.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+  if(m) return new Date().getFullYear() + '-' + pad2_(+m[1]) + '-' + pad2_(+m[2]);
+  m = text.match(/(?:^|[^\d])(\d{1,2})\s*\/\s*(\d{1,2})(?![\d\/])/);   // 결제 문자의 11/14
+  if(m && +m[1] >= 1 && +m[1] <= 12 && +m[2] >= 1 && +m[2] <= 31)
+    return new Date().getFullYear() + '-' + pad2_(+m[1]) + '-' + pad2_(+m[2]);
+  return '';
+}
+
+var CARDS = ['신한','국민','KB','삼성','현대','롯데','하나','우리','농협','NH','BC','비씨',
+             '카카오뱅크','카카오','토스','케이뱅크','씨티','수협','광주','전북','제주','새마을'];
+function pickCard_(text){
+  var t = text.replace(/\s/g, '');
+  if(/현금영수증|현금결제|현\s*금/.test(text) && !/카드/.test(text)) return '현금';
+  if(/계좌이체|무통장|이체/.test(t)) return '계좌이체';
+  /* '체크인' 의 체크를 체크카드로 잘못 보지 않게 신용을 먼저 본다 */
+  var kind = /체크카드/.test(t) ? ' 체크'
+           : (/신용|일시불|할부/.test(t) ? ' 신용'
+           : (/체크(?!인|아웃)/.test(t) ? ' 체크' : ''));
+  for(var i = 0; i < CARDS.length; i++){
+    if(t.indexOf(CARDS[i]) >= 0) return CARDS[i] + kind;
+  }
+  if(/카드/.test(t)) return '카드';
+  return '';
+}
+
+/* 가게 이름 — 영수증마다 자리가 달라서 여러 단서를 본다 */
+var STORE_KEY = /(상\s*호(?:명)?|가맹점(?:명)?|매장(?:명)?|점\s*포(?:명)?|사업자명|주문처|판매자|업소명|숙소명)\s*[:：]?\s*(.+)$/;
+var STORE_BAD = /영수증|신용카드|매출전표|승인|거래|고객용|가맹점용|사업자|대표자|주소|전화|TEL|합계|금액|부가세|일시|번호|발신|누적|일시불|할부|^\[|님\s*$|^\d/;
+function pickStore_(lines){
+  for(var i = 0; i < lines.length; i++){
+    var m = lines[i].match(STORE_KEY);
+    if(m){
+      var v = m[2].trim().replace(/\s*\(.*$/, '');
+      if(v && v.length <= 40) return v;
+    }
+  }
+  /* 맨 위 몇 줄에서 가게 이름처럼 보이는 것 */
+  for(var j = 0; j < Math.min(lines.length, 6); j++){
+    var L = lines[j].trim();
+    if(!L || L.length > 30) continue;
+    if(STORE_BAD.test(L)) continue;
+    if(/^[\d\s\-.,:()]+$/.test(L)) continue;
+    return L;
+  }
+  return '';
+}
+
+/* 쿠팡·마켓컬리 같은 '여러 품목' 주문 내역에서 품목과 금액을 뽑는다 */
+var ITEM_NOISE = /장바구니|담기|배송|도착|보장|상품준비|배송완료|리뷰|교환|반품|더보기|주문상세|^·$/;
+var ITEM_PRICE = /^\s*([0-9][0-9,]{2,})\s*원\s*[·,\|]?\s*(?:(\d+)\s*개)?\s*$/;
+
+function cleanName_(s){
+  return String(s||'')
+    .replace(/^[^0-9A-Za-z가-힣]+/, '')                       // 앞의 🚀 같은 기호 제거
+    .replace(/^(로켓프레시|로켓배송|로켓직구|로켓와우|로켓|새벽배송|무료배송|판매자배송)\s*/, '')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function parseItems_(lines){
+  var items = [];
+  for(var i = 0; i < lines.length; i++){
+    var m = lines[i].match(ITEM_PRICE);
+    if(!m) continue;
+    var price = parseInt(m[1].replace(/,/g,''), 10);
+    if(!(price >= 100)) continue;
+    /* 금액 줄 바로 위에서 품목 이름을 찾는다 */
+    var name = '';
+    for(var j = i - 1; j >= 0 && j >= i - 4; j--){
+      var L = lines[j];
+      if(!L || ITEM_PRICE.test(L) || ITEM_NOISE.test(L)) continue;
+      if(/^[\d\s.,:\/·원개-]+$/.test(L)) continue;
+      name = cleanName_(L); break;
+    }
+    if(!name) continue;
+    items.push({ 이름: name.slice(0,60), 금액: price, 수량: m[2] ? parseInt(m[2],10) : 1 });
+  }
+  return items;
+}
+
+/* 어느 가게/쇼핑몰인지 */
+var SHOPS = ['쿠팡','마켓컬리','컬리','네이버','11번가','G마켓','지마켓','옥션','SSG','이마트','홈플러스',
+             '배달의민족','배민','요기요','쿠팡이츠','티몬','위메프','알리익스프레스','무신사','올리브영'];
+function pickShop_(text){
+  var t = String(text||'').replace(/\s/g,'');
+  for(var i=0;i<SHOPS.length;i++) if(t.indexOf(SHOPS[i])>=0) return SHOPS[i];
+  if(/로켓프레시|로켓배송|로켓와우/.test(t)) return '쿠팡';
+  return '';
+}
+
+function parseReceipt_(raw){
+  var text = String(raw || '').replace(/\r/g, '');
+  var lines = text.split('\n').map(function(s){ return s.trim(); })
+                  .filter(function(s){ return s; });
+  if(!lines.length) return { 사유:'', 금액:0, 카드:'', 날짜:'', ok:false };
+  var items = parseItems_(lines);
+  var shop  = pickShop_(text);
+  var amount = pickAmount_(lines);
+
+  /* 품목이 여러 개인 주문 내역(쿠팡 등)은 합계가 안 적혀 있을 때가 많다.
+     그럴 땐 품목을 더해서 쓰고, 어느 품목을 넣을지는 화면에서 고르게 한다. */
+  if(items.length >= 2){
+    var sum = 0;
+    items.forEach(function(it){ sum += it.금액; });
+    if(!amount || amount < sum) amount = sum;
+  }
+  return {
+    사유 : shop || pickStore_(lines),
+    금액 : amount,
+    카드 : pickCard_(text),
+    날짜 : pickDate_(text),
+    품목 : items.length >= 2 ? items : [],
+    ok   : amount > 0
+  };
+}
+
+/** 영수증 사진을 따로 모아두는 폴더 (여행 사진과 섞이지 않게) */
+function receiptFolder_(){
+  var id = cfg_('영수증폴더ID');
+  if(id){ try{ return DriveApp.getFolderById(id); }catch(e){} }
+  var folder = DriveApp.createFolder('여행 상황판 영수증 — ' + (cfg_('여행이름') || '여행'));
+  try{ folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }catch(e){}
+  setCfg_('영수증폴더ID', folder.getId());
+  return folder;
+}
+
+/** 사진에서 글자를 뽑아낸다. Drive API 서비스가 없으면 친절히 알려준다.
+ *  Drive API 를 v2 로 넣었는지 v3 로 넣었는지에 따라 부르는 이름이 달라서 둘 다 받아준다. */
+function ocrImage_(blob){
+  if(typeof Drive === 'undefined' || !Drive || !Drive.Files)
+    throw new Error('사진 글자 인식을 먼저 켜야 합니다.\n\n' +
+      'Apps Script 편집기 왼쪽 [서비스] 의 + 를 눌러 "Drive API" 를 추가하고 저장한 뒤,\n' +
+      '배포 > 배포 관리 > 연필 > 새 버전 으로 다시 배포해 주세요.\n' +
+      '무료이고 한 번만 하면 됩니다.\n\n' +
+      '그 전에는 [글자로 붙여넣기] 방식을 쓰시면 바로 됩니다.');
+
+  var name = 'OCR_' + Date.now();
+  var asDoc = 'application/vnd.google-apps.document';   // 문서로 바꾸면서 글자를 뽑는다
+  var id = '';
+  try{
+    if(Drive.Files && Drive.Files.insert){              // Drive API v2
+      id = Drive.Files.insert({ title: name, mimeType: asDoc }, blob,
+                              { ocr: true, ocrLanguage: 'ko' }).id;
+    }else{                                              // Drive API v3
+      id = Drive.Files.create({ name: name, mimeType: asDoc }, blob,
+                              { ocrLanguage: 'ko' }).id;
+    }
+    return DocumentApp.openById(id).getBody().getText();
+  } finally {
+    if(id){ try{ DriveApp.getFileById(id).setTrashed(true); }catch(e){} }   // 임시 문서는 버린다
+  }
+}
+
+/** 영수증 사진 한 장을 읽어 추천값을 돌려준다 (저장은 하지 않는다) */
+function readReceiptImage(token, mime, base64){
+  var u = who_(token);
+  if(expensesClosed_()) throw new Error('지출이 마감되었습니다.');
+  base64 = String(base64||'');
+  if(!base64) throw new Error('사진 내용이 비어 있습니다.');
+  if(base64.length > 11000000) throw new Error('사진이 너무 큽니다. 한 장씩 올려주세요.');
+  mime = String(mime||'image/jpeg');
+  if(mime.indexOf('image/') !== 0) throw new Error('사진 파일만 올릴 수 있습니다.');
+
+  var stamp = Utilities.formatDate(new Date(), TZ, 'yyyyMMdd_HHmmss');
+  var blob = Utilities.newBlob(Utilities.base64Decode(base64), mime,
+                               '영수증_' + u.name + '_' + stamp + (mime==='image/png'?'.png':'.jpg'));
+  var text = ocrImage_(blob);
+
+  /* 원본은 남겨두고 지출에 연결한다 */
+  var file = receiptFolder_().createFile(blob);
+  try{ file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); }catch(e){}
+
+  var r = parseReceipt_(text);
+  r.영수증 = 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w1200';
+  r.원문 = String(text||'').slice(0, 1500);
+  return r;
+}
+
+/** 웹 영수증·결제 문자처럼 글자로 된 것을 읽는다 (OCR 불필요) */
+function readReceiptText(token, text){
+  who_(token);
+  if(expensesClosed_()) throw new Error('지출이 마감되었습니다.');
+  var t = String(text||'').trim();
+  if(!t) throw new Error('영수증 내용을 붙여넣어 주세요.');
+  if(t.length > 20000) t = t.slice(0, 20000);
+  var r = parseReceipt_(t);
+  r.영수증 = '';
+  r.원문 = t.slice(0, 1500);
+  return r;
+}
+
 function photoFolder_(){
   var id = cfg_('사진폴더ID');
   if(id){
