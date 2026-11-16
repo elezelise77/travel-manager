@@ -335,6 +335,15 @@ dialog h3{font-size:17px;padding:17px 18px 0}
 dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
 .dlgfoot{display:flex;justify-content:flex-end;gap:8px}
 .empty{padding:20px 16px;text-align:center;color:var(--ink-3);font-size:13.5px}
+.startguide{margin-bottom:14px;border-color:var(--accent-soft)}
+.sgrow{display:flex;align-items:center;gap:11px;padding:11px 16px;border-top:1px solid var(--line)}
+.sgrow:first-child{border-top:0}
+.sgmark{flex:0 0 20px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line-2);
+  display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.sgrow.done .sgmark{background:var(--good);border-color:var(--good)}
+.sgrow.done .sgtext>b{color:var(--ink-3);text-decoration:line-through}
+.sgtext{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.sgtext>b{font-size:14px}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:99;
   background:var(--ink);color:var(--ground);padding:9px 16px;border-radius:999px;font-size:13.5px;
   box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s;max-width:90vw;text-align:center}
@@ -412,7 +421,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
       <div class="err" id="loginErr"></div>
       <button class="btn primary block" type="submit">들어가기</button>
     </form>
-    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.6.0</span></div>
+    <div class="sm muted" style="text-align:center;margin-top:14px">v<span class="mono">2.7.0</span></div>
   </div>
 </div>
 
@@ -457,6 +466,12 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
   <!-- 대시보드 -->
   <section id="sec-dash">
     <div class="dash">
+      <!-- adminonly 를 쓰면 renderAll 이 뒤에서 다시 보이게 만든다
+           — 표시 여부는 renderStartGuide 가 직접 정한다 -->
+      <div class="card startguide" id="startGuide" hidden>
+        <div class="h"><h3>시작하기</h3><span class="sm muted" id="sgCount"></span></div>
+        <div id="sgSteps"></div>
+      </div>
       <div class="notice" id="dashModeNotice" hidden></div>
       <div class="hero">
         <div class="eyebrow">TRIP</div>
@@ -706,7 +721,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
     </div>
 
     <div class="sm muted" style="text-align:center;margin-top:20px">
-      화면 <span class="mono" id="uiVer">2.6.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
+      화면 <span class="mono" id="uiVer">2.7.0</span><span id="uiFrom"></span> · 서버 <span class="mono" id="svVer">—</span>
     </div>
   </section>
 </main>
@@ -740,7 +755,7 @@ dialog form{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
       <b>② 글자로 붙여넣기</b>
       <div class="sm muted">웹 영수증, 주문 내역, 카드 결제 문자를 그대로 복사해 붙여넣으세요.
         사진 인식보다 정확합니다.</div>
-      <textarea id="rcText" rows="7" placeholder="예)&#10;국민체크카드승인 32,500원&#10;11/14 20:15&#10;GS25대부도점"></textarea>
+      <textarea id="rcText" rows="7" placeholder="예)&#10;국민체크카드승인 32,500원&#10;11/14 20:15&#10;○○편의점 ○○점"></textarea>
       <button class="btn primary" id="rcRead" type="button">읽기</button>
     </div>
     <div class="sm muted">읽은 내용은 바로 저장되지 않습니다. 확인하고 고친 뒤 저장하시면 됩니다.</div>
@@ -1070,8 +1085,45 @@ function sortedMoves(){return S.moves.slice().sort(function(a,b){
   return (a.date||"9999").localeCompare(b.date||"9999")||(a.at||"99").localeCompare(b.at||"99")})}
 
 /* ---------- 대시보드 ---------- */
+/* 빈 시트로 막 시작한 방장에게 '다음에 뭘 하면 되는지' 보여준다.
+ * 세 가지가 다 끝나면 카드는 저절로 사라진다. */
+function renderStartGuide(){
+  var box=$("#startGuide");
+  if(!isAdmin()){ box.hidden=true; return; }
+  var m=S.meta||{};
+  var people=S.members.filter(function(x){return x.name}).length;
+  var steps=[
+    { ok: !!(String(m["출발일"]||"").slice(0,10) && String(m["장소"]||"").trim()),
+      t:"여행 정보 넣기", d:"이름 · 날짜 · 장소를 채웁니다",
+      btn:"정보 넣기", act:'data-sg="meta"' },
+    { ok: people>=2,
+      t:"같이 가는 사람 등록", d: people>=2 ? people+"명 등록됨"
+        : (people?people+"명 — 더 추가하세요":"아직 아무도 없습니다"),
+      btn:"인원 추가", act:'data-sg="people"' },
+    { ok: S.expenses.length>0,
+      t:"지출 올리기", d:"영수증은 캡처해서 붙여넣기만 하면 됩니다",
+      btn:"지출대장", act:'data-sg="expense"' }
+  ];
+  var done=steps.filter(function(s){return s.ok}).length;
+  if(done===steps.length){ box.hidden=true; return; }
+  box.hidden=false;
+  $("#sgCount").textContent=done+" / "+steps.length+" 완료";
+  $("#sgSteps").innerHTML = steps.map(function(s){
+    return '<div class="sgrow'+(s.ok?" done":"")+'">'+
+      '<span class="sgmark">'+(s.ok?"✓":"")+'</span>'+
+      '<span class="sgtext"><b>'+esc(s.t)+'</b><span class="sm muted">'+esc(s.d)+'</span></span>'+
+      (s.ok?'':'<button class="btn tiny primary" '+s.act+'>'+esc(s.btn)+'</button>')+
+      '</div>';
+  }).join("")+
+    '<div class="sgrow"><span class="sgmark"></span>'+
+    '<span class="sgtext"><b>친구들에게 링크 보내기</b>'+
+    '<span class="sm muted">받는 사람은 설치 없이 링크만 열면 됩니다</span></span>'+
+    '<button class="btn tiny" data-sg="link">링크 복사</button></div>';
+}
+
 function renderDash(){
   var m=S.meta||{}, c=calc();
+  renderStartGuide();
   var start=String(m["출발일"]||"").slice(0,10), end=String(m["종료일"]||"").slice(0,10);
   var title=m["여행이름"]||"여행 상황판";
   $("#heroTitle").textContent=title;
@@ -1900,6 +1952,20 @@ document.addEventListener("click",function(e){
     return;
   }
   if(t.id==="pwBtn"||t.id==="pwNoticeBtn"){ openPwForm(); return; }
+  if(t.dataset.sg){
+    var sg=t.dataset.sg;
+    if(sg==="meta"){ document.getElementById("metaBtn").click(); return; }
+    if(sg==="people"){ goTab("people"); setTimeout(function(){
+      var b=document.getElementById("addMember"); if(b) b.click(); },120); return; }
+    if(sg==="expense"){ goTab("expense"); return; }
+    if(sg==="link"){
+      var u=$("#shareUrl").value;
+      toast(u && copyText(u) ? "링크를 복사했습니다 — 단톡방에 붙여넣으세요"
+                             : "복사하지 못했습니다 — 설정 탭에서 주소를 길게 눌러 복사해 주세요");
+      return;
+    }
+    return;
+  }
   if(t.id==="discAdd"){ openDiscForm(null); return; }
   if(t.dataset.disc){ openDiscForm(byRow(S.discounts, t.dataset.disc)); return; }
   if(t.id==="copyUrl"){ toast(copyText($("#shareUrl").value)?"링크를 복사했습니다":"복사하지 못했습니다 — 주소를 길게 눌러 복사해 주세요"); return; }
